@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { FINAL_CIPHER, FINAL_BINARY, decodeVigenere, checkLocation, checkCaseCode, readProgress } from '../mission.js';
+assert.equal(decodeVigenere(FINAL_CIPHER,'SIMPLE'), 'DAS GESCHENK IST BEI BOMBSITE A');
+assert.equal(FINAL_BINARY.split(' ').map(b=>String.fromCharCode(parseInt(b,2))).join(''),'3427');
+for(const value of ['BOMBSITE A','bombsite a','DAS GESCHENK IST BEI BOMBSITE A.']) assert.ok(checkLocation(value));
+for(const value of ['BOMBSITE B','BOCO','SIMPLE','']) assert.ok(!checkLocation(value));
+assert.ok(checkCaseCode('3 4 2 7')); assert.ok(!checkCaseCode('2626')); assert.ok(!checkCaseCode('BOCO'));
+assert.deepEqual(readProgress({getItem:()=>'{oops'}),{cats:false,location:false,complete:false});
+assert.deepEqual(readProgress({getItem:()=>JSON.stringify({complete:true})}),{cats:false,location:false,complete:false});
+console.log('Mission: printed cipher, binary code, answers and progress validation passed.');

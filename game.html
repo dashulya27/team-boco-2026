@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BOCO // Katzeninsel</title>
+  <link rel="icon" href="./assets/branding/boco.png" type="image/png">
+  <link rel="stylesheet" href="./styles.css?v=1.4.1">
+  <script>
+    try { if (sessionStorage.getItem('boco.paper-access.v1') !== 'granted') location.replace('./'); }
+    catch { location.replace('./'); }
+  </script>
+  <script type="module" src="./main.js?v=1.4.1"></script>
+</head>
+<body data-scene="map">
+  <main class="game-shell">
+    <div class="game-frame">
+      <canvas
+        id="gameCanvas"
+        width="960"
+        height="640"
+        aria-label="BOCO birthday game: Katzeninsel"
+      ></canvas>
+
+      <div class="touch-controls" aria-label="Touch-Steuerung">
+        <div class="touch-dpad" aria-label="Bewegung">
+          <button class="touch-key touch-up" type="button" data-key="w" aria-label="Nach oben">▲</button>
+          <button class="touch-key touch-left" type="button" data-key="a" aria-label="Nach links">◀</button>
+          <button class="touch-key touch-down" type="button" data-key="s" aria-label="Nach unten">▼</button>
+          <button class="touch-key touch-right" type="button" data-key="d" aria-label="Nach rechts">▶</button>
+        </div>
+
+        <div class="touch-actions" aria-label="Aktionen">
+          <div class="touch-utility">
+            <button class="touch-tap" type="button" data-tap-key="escape" aria-label="Zur Weltkarte">MAP</button>
+            <button class="touch-tap" type="button" data-tap-key="r" aria-label="Level neu starten">↻</button>
+          </div>
+          <button class="touch-key touch-action" type="button" data-key="e" aria-label="Katze aufnehmen">E</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="controls">
+      <span><kbd>WASD</kbd> / <kbd>←↑↓→</kbd> bewegen</span>
+      <span><kbd>E</kbd> halten: Katze aufnehmen</span>
+      <span><kbd>R</kbd> Level neu starten</span>
+      <span><kbd>Esc</kbd> Karte</span>
+      <span class="build-version">BUILD 1.4.1</span>
+    </p>
+  </main>
+  <section id="mission-panel" class="mission-panel" role="dialog" aria-modal="true" aria-label="Finale der Geburtstagsmission" hidden></section>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "team-boco-2026",
+  "version": "1.4.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "build:room": "node scripts/build-room.mjs",
+    "test": "node tests/mission.mjs && node tests/playthrough.mjs && node tests/finale-ui.mjs && node tests/access.cjs && node tests/package.mjs && node tests/server.mjs",
+    "test:browser": "node tests/browser.cjs"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^0.1.100",
+    "playwright": "1.62.1"
+  }
+}
