@@ -8,7 +8,7 @@ const [page,css,main,room] = await Promise.all([
   image('assets/rooms/cat-room/cat-room-structure.png')
 ]);
 const modules = await Promise.all(['cat-island.js','finale-island.js','mission.js','room-background.js'].map(read));
-const support=await Promise.all(['room-layout.js','sprite-assets.js','pixel-art.js','island-decor.js','paper-access.js','world-camera.js'].map(read));
+const support=await Promise.all(['room-layout.js','sprite-assets.js','pixel-art.js','island-decor.js','paper-access.js','world-camera.js','world-atmosphere.js','room-polish.js'].map(read));
 const manifest=JSON.parse(await read('assets/sprites/manifest.json'));
 const encoded=new Map();
 const imageSources={};

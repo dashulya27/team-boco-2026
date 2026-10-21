@@ -1,4 +1,4 @@
-import { ROOM_FLOOR,ROOM_BULBS,paintRoomDoor } from './room-layout.js?v=1.7.0';
+import { ROOM_FLOOR,ROOM_BULBS,paintRoomDoor } from './room-layout.js?v=1.9.1';
 // Built-in room structure. Furniture, cats and lighting are drawn by cat-island.js.
 // All coordinates use the game's 960 × 640 collision map.
 export function drawRoomBackground(ctx) {

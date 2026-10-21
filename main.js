@@ -1,15 +1,16 @@
-import { createCatIslandLevel } from "./cat-island.js?v=1.7.0";
-import { createMissionController } from "./mission.js?v=1.7.0";
-import { createRoomBackground } from "./room-background.js?v=1.7.0";
-import { loadSpriteAssets } from "./sprite-assets.js?v=1.7.0";
-import { ROOM_BULBS } from './room-layout.js?v=1.7.0';
-import { drawFinaleIsland, drawFutureIsland } from './finale-island.js?v=1.7.0';
+import { createCatIslandLevel } from "./cat-island.js?v=1.9.1";
+import { createMissionController } from "./mission.js?v=1.9.1";
+import { createRoomBackground } from "./room-background.js?v=1.9.1";
+import { loadSpriteAssets } from "./sprite-assets.js?v=1.9.1";
+import { ROOM_BULBS } from './room-layout.js?v=1.9.1';
+import { drawFinaleIsland, drawFutureIsland } from './finale-island.js?v=1.9.1';
 
-import { createPaperAccessController, safeSessionStorage } from './paper-access.js?v=1.7.0';
-import { createWorldCamera, WORLD_VIEWPORT, WORLD_NODES, drawNeonConnection } from './world-camera.js?v=1.7.0';
-import { drawEntryIsland } from './finale-island.js?v=1.7.0';
+import { createPaperAccessController, safeSessionStorage } from './paper-access.js?v=1.9.1';
+import { createWorldCamera, WORLD_VIEWPORT, WORLD_NODES, drawNeonConnection } from './world-camera.js?v=1.9.1';
+import { drawEntryIsland } from './finale-island.js?v=1.9.1';
+import { paintVelvetSky,paintWorldDepth,paintMapLanterns,paintIslandWeather,paintFairyWorld } from './world-atmosphere.js?v=1.9.1';
 
-const BUILD_VERSION = "1.7.0";
+const BUILD_VERSION = "1.9.1";
 const IS_PREVIEW = false;
 const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches??false;
 
@@ -228,9 +229,8 @@ function drawWorldMap(timestamp,clock=timestamp) {
   const previewCtx=roomThumbnail.getContext('2d');previewCtx.clearRect(0,0,960,640);previewCtx.drawImage(canvas,0,0);
   drawFinaleIsland(finalThumbnail.getContext('2d'),timestamp,catIsland.assets,{complete:gameState.finaleCompleted,locked:!gameState.catIslandCompleted});
   drawFutureIsland(futureThumbnail.getContext('2d'),timestamp,catIsland.assets);
-  ctx.clearRect(0,0,960,640);ctx.fillStyle='#10101c';ctx.fillRect(0,0,960,640);
-  drawStars(timestamp);drawMapGrid();
-  drawMapHeart(900,543,2,'#bb849e');drawMapHeart(254,468,1.5,'#b99b7a');
+  ctx.clearRect(0,0,960,640);
+  paintVelvetSky(ctx,timestamp,{reducedMotion});drawStars(timestamp);drawMapGrid();
   // A connected little world: the OS reference informs layout, not the mood.
   ctx.fillStyle='rgba(31,25,43,.91)';ctx.fillRect(17,17,926,62);ctx.fillRect(17,94,166,513);
   ctx.strokeStyle='#66526b';ctx.lineWidth=1;ctx.strokeRect(17.5,17.5,925,61);ctx.strokeRect(17.5,94.5,165,512);ctx.strokeRect(196.5,94.5,746,512);
@@ -242,6 +242,7 @@ function drawWorldMap(timestamp,clock=timestamp) {
   drawText('UNSERE INSELN',29,117,10,'#95a9a3');
   const labels=['KATZENINSEL','GESCHENKINSEL','NEXT UPDATE'];
   const states=[gameState.catIslandCompleted?'GESCHAFFT / ♥':'NACHTSCHICHT / BEREIT',gameState.finaleCompleted?'FÜR DICH / ♥':gameState.catIslandCompleted?'DEINE LETZTE NACHRICHT':'NACH DER NACHTSCHICHT','COMING SOON'];
+  if(camera.focused===null) {
   moduleRows.forEach((row,i)=>{
     const selected=i===selectedIsland,available=i===0||(i===1&&gameState.catIslandCompleted);
     ctx.fillStyle=selected?'#392d41':'#201b2c';ctx.fillRect(row.x,row.y,row.width,row.height);
@@ -251,21 +252,28 @@ function drawWorldMap(timestamp,clock=timestamp) {
     ctx.fillStyle='#4c3b56';ctx.fillRect(row.x+8,row.y+55,128,3);
     ctx.fillStyle=selected?'#e7c58d':'#a283a4';ctx.fillRect(row.x+8,row.y+55,i===2?22:available?128:12,3);
   });
+  }
   drawText('UNSER KLEINES TEAM',29,449,10,'#ba9db9');
-  const logo=catIsland.assets.get('logo')?.image;
-  if(logo)ctx.drawImage(logo,58,465,84,84);
-  drawText('DOMINIK + DARINA',100,563,9,'#c8c9ae','center');
-  drawText('COCO + BOUNTY',100,582,9,'#8fa89f','center');
+  drawBocoBadge(ctx,99,508,1.05);
+  drawText('DOMINIK + DARINA',100,561,9,'#c8c9ae','center');
+  drawText('COCO + BOUNTY',100,580,9,'#8fa89f','center');
   drawText('DREI INSELN / EINE KLEINE WELT',217,115,10,'#76958c');
   drawText((Number(gameState.catIslandCompleted)+Number(gameState.finaleCompleted))+' / 2 ABENTEUER GESCHAFFT',920,115,9,'#b1b9a4','right');
 
   ctx.save();ctx.beginPath();ctx.rect(WORLD_VIEWPORT.x,WORLD_VIEWPORT.y,WORLD_VIEWPORT.width,WORLD_VIEWPORT.height);ctx.clip();camera.apply(ctx);
-  // Soft neon bridges share the island camera; particles travel along the entire path.
-  drawNeonConnection(ctx,[[540,275],[581,275],[581,327],[610,327],[636,355]],timestamp,{active:gameState.catIslandCompleted});
-  drawNeonConnection(ctx,[[748,407],[748,440],[591,440],[591,470],[505,495]],timestamp,{future:true});
+  paintWorldDepth(ctx,timestamp);
+  // Focused view puts the island first: links fade into the atmosphere.
+  ctx.save();ctx.globalAlpha=camera.focused===null?.85:.19;
+  drawNeonConnection(ctx,[[548,311],[578,317],[594,343],[628,353]],timestamp,{active:gameState.catIslandCompleted});
+  drawNeonConnection(ctx,[[747,439],[697,491],[584,509],[516,508]],timestamp,{future:true});
+  drawNeonConnection(ctx,[[348,344],[321,359],[323,398],[362,423]],timestamp,{active:true});
+  ctx.restore();
   ctx.globalAlpha=.94;ctx.drawImage(roomThumbnail,mapIsland.x,mapIsland.y,mapIsland.width,mapIsland.height);ctx.globalAlpha=1;
   ctx.drawImage(finalThumbnail,finalMapIsland.x,finalMapIsland.y,finalMapIsland.width,finalMapIsland.height);
   ctx.drawImage(futureThumbnail,futureMapIsland.x,futureMapIsland.y,futureMapIsland.width,futureMapIsland.height);
+  paintMapLanterns(ctx,timestamp);
+  paintFairyWorld(ctx,timestamp,worldNodes);
+  paintIslandWeather(ctx,timestamp,worldNodes,{reducedMotion});
   const scale=mapIsland.width/960;
   ROOM_BULBS.concat([[492,194]]).forEach(([x,y],i)=>{
     const color=i>=6&&i<12?'hsl('+((timestamp/85+i*32)%360)+',80%,72%)':'#f9d885';
@@ -273,9 +281,11 @@ function drawWorldMap(timestamp,clock=timestamp) {
     ctx.globalAlpha=.8+Math.sin(timestamp/330+i)*.12;
     ctx.fillRect(Math.round(mapIsland.x+x*scale),Math.round(mapIsland.y+y*scale),2,2);ctx.restore();
   });
-  worldNodeLabel(0,388,365,'01 // KATZENINSEL',gameState.catIslandCompleted?'CLEAR · NOCH EINE NACHT':'DREI SCHLÜSSEL · EINE NACHT');
-  worldNodeLabel(1,739,470,'02 // DIE LETZTE INSEL',gameState.finaleCompleted?'DEIN GEBURTSTAGSGRUSS ♥':gameState.catIslandCompleted?'VIGENÈRE · GESCHENK ENTDECKEN':'WIRD NACH DER NACHTSCHICHT FREI');
-  worldNodeLabel(2,423,577,'03 // NEXT UPDATE','UNSER NÄCHSTES ABENTEUER');
+  if(camera.focused===null){
+    worldNodeLabel(0,388,365,'01 // KATZENINSEL',gameState.catIslandCompleted?'CLEAR · NOCH EINE NACHT':'DREI SCHLÜSSEL · EINE NACHT');
+    worldNodeLabel(1,739,470,'02 // DIE LETZTE INSEL',gameState.finaleCompleted?'DEIN GEBURTSTAGSGRUSS ♥':gameState.catIslandCompleted?'VIGENÈRE · GESCHENK ENTDECKEN':'WIRD NACH DER NACHTSCHICHT FREI');
+    worldNodeLabel(2,423,577,'03 // NEXT UPDATE','UNSER NÄCHSTES ABENTEUER');
+  }
   ctx.restore();
   if(clock<mapNoticeUntil){
     ctx.fillStyle='rgba(6,16,20,.97)';ctx.fillRect(209,126,721,44);ctx.strokeStyle='#746f36';ctx.strokeRect(209.5,126.5,720,43);
@@ -283,9 +293,21 @@ function drawWorldMap(timestamp,clock=timestamp) {
   }
   drawText('← / → AUSWÄHLEN · ENTER REISEN · ESC ÜBERSICHT',28,624,10,'#8da297');
   drawText('BUILD '+BUILD_VERSION,929,624,9,'#536e64','right');
-  // Very subtle CRT texture; the game art stays clean and readable.
-  ctx.fillStyle='rgba(0,0,0,.055)';for(let y=18;y<605;y+=4)ctx.fillRect(18,y,924,1);
+  // Avoid scanlines across the small pixel sprites and thin interface fonts.
 }
+// Draw the small identity mark at native canvas resolution instead of
+// downscaling the large printed/QR logo (which became an unreadable blob).
+function drawBocoBadge(context,x,y,scale=1) {
+  context.save();context.translate(x,y);context.scale(scale,scale);
+  context.fillStyle='#282336';context.fillRect(-40,-28,80,59);
+  context.strokeStyle='#bd98a9';context.strokeRect(-39.5,-27.5,79,58);
+  context.fillStyle='#efd5bc';context.font='bold 18px "Courier New",monospace';
+  context.textAlign='center';context.fillText('BOCO',0,2);
+  context.fillStyle='#e7a3c0';context.fillRect(-15,11,8,5);context.fillRect(-9,17,8,5);
+  context.fillStyle='#f7dca1';context.fillRect(5,11,8,5);context.fillRect(2,17,8,5);
+  context.restore();
+}
+
 function worldNodeLabel(index,x,y,title,subtitle) {
   const selected=selectedIsland===index;
   drawText((selected?'▸ ':'')+title,x,y,14,selected?'#ffe16c':'#a9b5a8','center');
@@ -502,6 +524,9 @@ canvas.addEventListener('wheel',event=>{
   if(gameState.scene!=='map'||!paperPanel.hidden)return;
   event.preventDefault();pendingIsland=null;camera.zoomBy(event.deltaY<0 ? .15 : -.15,selectedIsland);updateWorldDock();
 },{passive:false});
+document.querySelectorAll('[data-mobile-island]').forEach(button=>button.addEventListener('click',()=>{
+  focusIsland(Number(button.dataset.mobileIsland));
+}));
 document.getElementById('world-open').addEventListener('click',()=>beginIslandTransition());
 document.getElementById('world-overview').addEventListener('click',()=>{pendingIsland=null;camera.overview();worldDock.hidden=true;canvas.focus({preventScroll:true});});
 document.getElementById('world-return').addEventListener('click',returnToMap);

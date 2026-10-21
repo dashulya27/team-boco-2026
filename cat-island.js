@@ -1,5 +1,7 @@
-import { createPixelArt } from "./pixel-art.js?v=1.7.0";
-import { ROOM_FLOOR,ROOM_OUTLINE,ROOM_DOOR,ROOM_BULBS,paintRoomDoor } from './room-layout.js?v=1.7.0';
+import { createPixelArt } from "./pixel-art.js?v=1.9.1";
+import { ROOM_FLOOR,ROOM_OUTLINE,ROOM_DOOR,ROOM_BULBS,paintRoomDoor } from './room-layout.js?v=1.9.1';
+import { paintBedroomWallTouches,paintBedroomFloorTouches,paintBedroomFurnitureTouches } from './room-polish.js?v=1.9.1';
+import { paintRoomFairyLights,paintRoomCandles } from './world-atmosphere.js?v=1.9.1';
 
 const WIDTH = 960;
 const HEIGHT = 640;
@@ -560,7 +562,9 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, assets = new Map(
     ctx.clearRect(0,0,WIDTH,HEIGHT);
     ctx.drawImage(roomImage,0,0,WIDTH,HEIGHT);
     art.rug();
+    paintBedroomFloorTouches(ctx,timestamp);
     drawWallDecor();
+    paintBedroomWallTouches(ctx,timestamp);
     const objects=[
       {y:368,draw:() => art.nightstand(drawTime)},
       {y:455,draw:() => {art.bed(); art.sleeping(drawTime,state.phase==='intro');}},
@@ -574,8 +578,11 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, assets = new Map(
       objects.push({y:player.y,draw:() => art.player(player,state.carriedCat,drawTime)});
     }
     objects.sort((a,b) => a.y-b.y).forEach(object => object.draw());
+    paintBedroomFurnitureTouches(ctx,timestamp);
     drawDarkness();
     drawLights(timestamp);
+    paintRoomFairyLights(ctx,timestamp);
+    paintRoomCandles(ctx,timestamp);
     drawParticles();
     ctx.restore();
     ctx=screenCtx;
@@ -591,13 +598,19 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, assets = new Map(
   }
 
   function drawWallDecor() {
-    const logo=assets.get('logo');
     ctx.save();
     ctx.translate(530,151);ctx.transform(1,.395,0,1,0,0);
     ctx.fillStyle='#141b2a';ctx.fillRect(-4,-4,65,75);
     ctx.fillStyle='#bba165';ctx.fillRect(-2,-2,61,71);
     ctx.fillStyle='#09111e';ctx.fillRect(0,0,57,67);
-    if(logo) ctx.drawImage(logo.image,3,3,51,51);
+    // Legible pixel poster instead of compressing the full-resolution BOCO logo.
+    ctx.fillStyle='#40314f';ctx.fillRect(3,3,51,51);
+    ctx.fillStyle='#e2b8ce';ctx.font='bold 11px monospace';ctx.fillText('TEAM',9,20);
+    ctx.fillStyle='#f3d29a';ctx.font='bold 13px monospace';ctx.fillText('BOCO',8,36);
+    ctx.fillStyle='#dc9eba';ctx.fillRect(17,43,4,4);ctx.fillRect(24,43,4,4);
+    ctx.fillRect(19,47,7,4);
+    ctx.fillStyle='#ead8a2';ctx.fillRect(34,43,4,4);ctx.fillRect(41,43,4,4);
+    ctx.fillRect(36,47,7,4);
     ctx.fillStyle='#dfc76b';ctx.fillRect(12,58,32,2);
     ctx.restore();
     ctx.save();ctx.translate(198,219);ctx.transform(1,-.395,0,1,0,0);

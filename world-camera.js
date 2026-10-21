@@ -33,24 +33,27 @@ export function createWorldCamera({reducedMotion=false}={}) {
   };
 }
 
+// v1.9: slim, curved light paths. Each is one continuous cubic Bézier
+// rather than a jagged polyline; the travelled dots follow the same curve.
 export function drawNeonConnection(ctx,points,timestamp,{active=false,future=false}={}) {
-  const colors=future?['#947bc8','#c9b7ed','#b0ede1']:active?['#b58b52','#f2ca81','#fff1bd']:['#aa749b','#edb4d5','#ffe0ed'];
-  ctx.save();ctx.lineJoin='round';ctx.lineCap='round';
-  const trace=()=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));};
-  ctx.strokeStyle='#17152a';ctx.lineWidth=12;trace();ctx.stroke();
-  for(const [width,blur,alpha]of [[7,22,.3],[4,12,.65],[2,4,.95]]){
-    ctx.globalAlpha=alpha;ctx.strokeStyle=colors[0];ctx.shadowColor=colors[1];ctx.shadowBlur=blur;ctx.lineWidth=width;trace();ctx.stroke();
-  }
-  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.strokeStyle=colors[1];ctx.lineWidth=1.5;trace();ctx.stroke();
-  const lengths=points.slice(1).map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1]));
-  const total=lengths.reduce((a,b)=>a+b,0);
-  for(let n=0;n<3;n++){
-    let distance=((timestamp*(active ? .065 : .035))+n*total/3)%total,index=0;
-    while(distance>lengths[index]&&index<lengths.length-1)distance-=lengths[index++];
-    const t=distance/lengths[index],x=points[index][0]+(points[index+1][0]-points[index][0])*t,y=points[index][1]+(points[index+1][1]-points[index][1])*t;
-    ctx.fillStyle=colors[2];ctx.shadowColor=colors[1];ctx.shadowBlur=11;ctx.fillRect(Math.round(x)-2,Math.round(y)-2,4,4);
-  }
-  ctx.shadowBlur=0;
-  points.forEach(([x,y],i)=>{if(i===0||i===points.length-1){ctx.fillStyle='#3d334a';ctx.fillRect(x-6,y-4,12,8);ctx.fillStyle=colors[1];ctx.fillRect(x-3,y-1,6,2);}});
+  const a=points[0], b=points[points.length-1];
+  const dx=b[0]-a[0],dy=b[1]-a[1];
+  const c1=points.length>=4?points[1]:[a[0]+dx*.33,a[1]+dy*.14];
+  const c2=points.length>=4?points[points.length-2]:[b[0]-dx*.33,b[1]-dy*.14];
+  const base=future?'#91c5c2':active?'#f1c99a':'#d7a5c8';
+  const bright=future?'#daeee6':active?'#fff0cc':'#f4d6e9';
+  const position=t=>{const q=1-t;return [q*q*q*a[0]+3*q*q*t*c1[0]+3*q*t*t*c2[0]+t*t*t*b[0],q*q*q*a[1]+3*q*q*t*c1[1]+3*q*t*t*c2[1]+t*t*t*b[1]];};
+  ctx.save();const inheritedAlpha=ctx.globalAlpha;ctx.lineCap='round';
+  const path=()=>{ctx.beginPath();ctx.moveTo(...a);ctx.bezierCurveTo(...c1,...c2,...b);};
+  ctx.strokeStyle='#181627';ctx.lineWidth=3;path();ctx.stroke();
+  ctx.globalAlpha=.13*inheritedAlpha;ctx.strokeStyle=base;ctx.lineWidth=3.2;ctx.shadowColor=base;ctx.shadowBlur=5;path();ctx.stroke();
+  ctx.globalAlpha=.70*inheritedAlpha;ctx.shadowBlur=0;ctx.lineWidth=1.35;path();ctx.stroke();
+  ctx.globalAlpha=.55*inheritedAlpha;ctx.strokeStyle=bright;ctx.lineWidth=.65;path();ctx.stroke();
+  // A single travelling firefly: noticeable on focus, never a distracting flood.
+  const t=((timestamp*(active?.00010:.000075))%1);
+  const [x,y]=position(t);
+  ctx.globalAlpha=.9*inheritedAlpha;ctx.fillStyle=bright;ctx.shadowColor=base;ctx.shadowBlur=5;ctx.fillRect(Math.round(x)-1,Math.round(y)-1,3,3);
+  ctx.shadowBlur=0;ctx.globalAlpha=inheritedAlpha;
+  for(const end of [a,b]){ctx.fillStyle='#42364b';ctx.fillRect(end[0]-3,end[1]-3,6,6);ctx.fillStyle=bright;ctx.fillRect(end[0]-1,end[1]-1,2,2);}
   ctx.restore();
 }

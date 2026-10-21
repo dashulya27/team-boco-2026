@@ -1,4 +1,4 @@
-import { drawSpriteFrame } from './sprite-assets.js?v=1.7.0';
+import { drawSpriteFrame } from './sprite-assets.js?v=1.9.1';
 
 // Small native details all live on the shared 480×320 scene grid.
 export function paintIslandGarden(ctx,time,{future=false}={}) {

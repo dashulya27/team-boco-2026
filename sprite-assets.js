@@ -8,7 +8,11 @@ export async function loadSpriteAssets({ manifest = null, manifestUrl = './asset
       if (response.ok) manifest = await response.json();
     } catch {}
   }
-  const base = new URL(manifestUrl, globalThis.location?.href || 'http://localhost/');
+  // In embedded previews the document can be opened from a file or an in-memory tab.
+  // A non-hierarchical page URL (about:blank) must not make the whole game fail.
+  let base;
+  try { base = new URL(manifestUrl, globalThis.location?.href || 'http://localhost/'); }
+  catch { base = new URL(manifestUrl, 'http://localhost/'); }
   await Promise.all(Object.entries(manifest?.sprites || {}).map(async ([id, config]) => {
     if (!config?.src) return;
     try {

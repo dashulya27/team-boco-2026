@@ -1,4 +1,4 @@
-import { drawFinaleIsland } from './finale-island.js?v=1.7.0';
+import { drawFinaleIsland } from './finale-island.js?v=1.9.1';
 
 export const FINAL_CIPHER = 'VIE VPWUPQCV MKB NTT FGUNHTXW I';
 // Kept for the existing printed material; no second code-entry gate in this game.

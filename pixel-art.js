@@ -1,4 +1,4 @@
-import { drawSpriteFrame } from './sprite-assets.js?v=1.7.0';
+import { drawSpriteFrame } from './sprite-assets.js?v=1.9.1';
 
 export function createPixelArt(ctx, assets = new Map()) {
   const rect = (x,y,w,h,color) => { ctx.fillStyle=color; ctx.fillRect(Math.round(x),Math.round(y),w,h); };
@@ -11,7 +11,17 @@ export function createPixelArt(ctx, assets = new Map()) {
     ctx.beginPath(); points.forEach(([x,y],i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y));
     ctx.lineWidth=width; ctx.strokeStyle=color; ctx.stroke();
   }
-  function shadow(x,y,w,h) { ctx.save(); ctx.globalAlpha=.26; poly([[x-w/2,y],[x,y-h/2],[x+w/2,y],[x,y+h/2]],'#020611'); ctx.restore(); }
+  function shadow(x,y,w,h) {
+    // Small floor-contact shadow, not an oversized black diamond.
+    // This is placed under the feet in WORLD coordinates and never travels with a sprite atlas.
+    ctx.save();
+    ctx.globalAlpha=.16;
+    ctx.fillStyle='#0a0b18';
+    ctx.beginPath();
+    ctx.ellipse(Math.round(x),Math.round(y),w*.45,h*.40,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   function rug() {
     poly([[400,407],[603,326],[770,417],[566,505]],'#141f36','#46526d');

@@ -1,5 +1,6 @@
-import { drawSpriteFrame } from './sprite-assets.js?v=1.7.0';
-import { paintIslandGarden,paintLibraryDetails,paintWorkshopDetails } from './island-decor.js?v=1.7.0';
+import { drawSpriteFrame } from './sprite-assets.js?v=1.9.1';
+import { paintIslandGarden,paintLibraryDetails,paintWorkshopDetails } from './island-decor.js?v=1.9.1';
+import { paintRoomFairyLights,paintRoomCandles } from './world-atmosphere.js?v=1.9.1';
 
 // Same 480×320 pixel grid as the cat room, reused for the map and the final scene.
 const finalePixelBuffers=new WeakMap();
@@ -78,8 +79,7 @@ function paintFinaleIsland(ctx, timestamp, assets = new Map(), { complete = fals
     text(complete?'♥':'SIMPLE'[i],x,y+2,18,complete?'#f0b1c6':'#e9d16f');
   }
   // BOCO emblem in the arch, retaining the actual supplied logo.
-  const logo=assets.get('logo')?.image;
-  if(logo){ctx.drawImage(logo,446,219,68,68);} else {text('BOCO',480,248,24);}
+  rect(429,214,103,63,'#302a42');rect(433,218,95,55,'#473b56');text('BOCO',480,249,25,'#ffdfa4');
   // Lanterns, a short garland and softly animated cores, visible from the map.
   ctx.strokeStyle='#63708a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(270,262);ctx.quadraticCurveTo(480,338,692,262);ctx.stroke();
   for(let i=0;i<9;i++) {
@@ -118,6 +118,8 @@ function paintFinaleIsland(ctx, timestamp, assets = new Map(), { complete = fals
     text('?',485,366,28,'#fff0b3');
   }
   paintLibraryDetails(ctx,timestamp,assets,{complete});
+  paintRoomFairyLights(ctx,timestamp,{kind:'library'});
+  paintRoomCandles(ctx,timestamp,{kind:'library'});
   const actors=complete?[["coco",345,434,.94],["dominik",442,442,1.25],["darina",498,442,1.25],["bounty",577,450,1.1]]
     :[["coco",337,417,.9],["bounty",622,420,1]];
   actors.forEach(([id,x,y,scale])=>drawSpriteFrame(ctx,assets,id,x,y,{direction:'down',time:timestamp,scale}));
@@ -128,7 +130,10 @@ function paintFinaleIsland(ctx, timestamp, assets = new Map(), { complete = fals
       else rect(Math.round(x),Math.round(y),3,6,i%2?'#f3d275':'#8bb6cb');
     }
   }
-  if(locked) {ctx.fillStyle='rgba(5,11,23,.32)';ctx.fillRect(160,90,660,470);}
+  // A locked island stays fully visible in the world.
+  // Never dim it with an axis-aligned rectangle: that reads as a broken shadow
+  // around the floating floor when this transparent scene is scaled down.
+  // Entry restrictions are enforced by the game state, not by a drawn overlay.
   ctx.restore();
 }
 
@@ -148,7 +153,9 @@ function paintFutureIsland(ctx,timestamp,assets=new Map(),{background=false}={})
   for(const [x,y]of [[216,359],[744,368],[609,417]]){r(x,y,4,24,'#6d855e');r(x-6,y+9,8,5,'#8b9f72');r(x-3,y-4,10,9,'#d6a1b3');r(x,y-1,4,3,'#f4d589');}
   const pulse=.55+(Math.sin(timestamp/450)+1)*.2;ctx.globalAlpha=pulse;r(335,178,13,8,'#e7cc69');r(615,178,13,8,'#e7cc69');ctx.globalAlpha=1;
   paintIslandGarden(ctx,timestamp,{future:true});paintWorkshopDetails(ctx,timestamp,assets);
-  if(assets.get('logo')?.image)ctx.drawImage(assets.get('logo').image,640,317,35,35);
+  paintRoomFairyLights(ctx,timestamp,{kind:'future'});
+  paintRoomCandles(ctx,timestamp,{kind:'future'});
+  r(638,318,48,24,'#30374a');t('BOCO',662,335,13,'#efd18f');
   ctx.restore();
 }
 
@@ -167,7 +174,7 @@ function paintEntryIsland(ctx,timestamp,assets=new Map(),{background=false}={}) 
   for(let i=0;i<5;i++)rect(409+i*18,208+i*4,2,118,'#a58983');rect(486,293,5,8,'#f2cf82');
   rect(349,139,260,18,'#ad8e88');rect(375,119,208,25,'#44384b');
   ctx.font='bold 17px "Courier New",monospace';ctx.textAlign='center';ctx.fillStyle='#edcf9d';ctx.fillText('FÜR DICH. MIT LIEBE.',480,137);
-  const logo=assets.get('logo')?.image;if(logo)ctx.drawImage(logo,440,202,73,73);
+  rect(436,205,88,57,'#3c344c');rect(440,209,80,49,'#645069');ctx.font='bold 26px "Courier New",monospace';ctx.textAlign='center';ctx.fillStyle='#f7d49c';ctx.fillText('BOCO',480,241);
   poly([[363,379],[537,399],[594,379],[590,392],[535,417],[363,393]],'#8e7a85');
   poly([[356,396],[535,417],[598,392],[601,405],[535,434],[350,411]],'#685d75');
   for(const [x,y]of [[301,322],[657,322]]){
@@ -180,6 +187,8 @@ function paintEntryIsland(ctx,timestamp,assets=new Map(),{background=false}={}) 
     poly([[x-17,y-10],[x+16,y-18],[x+25,y-9],[x-7,y+2]],'#ba8a82');poly([[x-17,y-10],[x-7,y+2],[x-6,y+26],[x-15,y+18]],'#816574');poly([[x-7,y+2],[x+25,y-9],[x+20,y+16],[x-6,y+26]],'#a17c7b');
     rect(x,y-37,4,28,'#8d9c77');rect(x-10,y-31,13,7,'#a3b08a');rect(x+3,y-20,13,6,'#849d7a');rect(x-2,y-45,10,10,'#d7a7bf');rect(x+1,y-42,4,4,'#f5d791');
   }
+  paintRoomFairyLights(ctx,timestamp,{kind:'entry'});
+  paintRoomCandles(ctx,timestamp,{kind:'entry'});
   drawSpriteFrame(ctx,assets,'coco',367,443,{time:timestamp,scale:1.25});drawSpriteFrame(ctx,assets,'bounty',599,449,{time:timestamp,scale:1.4});
   const heart=['0110110','1111111','1111111','0111110','0011100','0001000'];ctx.fillStyle='#d9a0ba';heart.forEach((row,iy)=>[...row].forEach((bit,ix)=>{if(bit==='1')ctx.fillRect(470+ix*3,440+iy*3,3,3);}));
   ctx.restore();

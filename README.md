@@ -1,12 +1,12 @@
 # TEAM BOCO // DOMINIK 2026
 
-Version **1.7.0**. Ein zusammenhängendes, persönliches Pixel-Geburtstagsspiel:
+Version **1.8.0**. Ein zusammenhängendes, persönliches Pixel-Geburtstagsspiel:
 Papier-Caesar → Weltkarte → Katzeninsel → Vigenère-Insel → PC-Geburtstagsgruß.
 Der dritte Inselplatz ist ein detaillierter, besuchbarer Zukunftsort ohne Pflichtaufgabe.
 
 ![Unsere kleine Welt](docs/previews/world.png)
 
-Russische Anleitung: [START_HERE_RU.md](START_HERE_.md).
+Russische Anleitung: [START_HERE_RU.md](START_HERE_RU.md).
 
 ## Spiel und Vorschau
 
@@ -42,6 +42,10 @@ Plus/Minus, Mausrad und Ziehen ergänzen den Zoom. Reduced Motion wird berücksi
 Auf einem Touch-Gerät im Hochformat liegen die Zoomtasten unter dem Bild.
 
 Die Verbindungen haben mehrere sanfte Neonlagen und wandernde Lichtpunkte.
+Alle drei Inseln sind verbunden. Über Katzeninsel schweben animierte Herzen,
+über Geschenkinsel Lichtsterne und über der Zukunftsinsel echte 0/1-Zeichen.
+Velvet-Sky mit Pixel-Nebelwolken, mehrere Girlanden und flackernde Kerzen
+sind dekorativ und verändern keine Kollisionen oder Rätsel.
 Alle Inseln teilen eine 480×320-Pixelbasis. Raum: schwebendes Fundament, Bücherregal,
 Katzenportrait, Möbel und lebendige Lampen. Finale: Lesetisch, Decoder-Rad, Bücher,
 Pflanzen und der Geburtstags-PC. Zukunft: Werkbank, Plan, Bücher, Katzenkorb,
