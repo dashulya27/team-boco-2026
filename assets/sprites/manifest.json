@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "sprites": {
+    "logo": { "src": "../branding/boco.png" },
+    "dominik": {
+      "src": "characters-original.jpeg", "removeWhiteBorder": true, "displayHeight": 62,
+      "poses": {
+        "down": { "rect": [228,4,154,308] },
+        "up": { "rect": [493,4,155,308] },
+        "left": { "rect": [795,4,156,308], "flipX": true },
+        "right": { "rect": [1070,4,165,308] }
+      }
+    },
+    "darina": {
+      "src": "characters-original.jpeg", "removeWhiteBorder": true, "displayHeight": 60,
+      "poses": {
+        "down": { "rect": [199,317,211,302] },
+        "up": { "rect": [470,317,196,302] },
+        "right": { "rect": [767,317,189,302] },
+        "left": { "rect": [1068,317,181,302] }
+      }
+    },
+    "dominikSleep": null,
+    "coco": {
+      "src": "characters-original.jpeg", "removeWhiteBorder": true, "displayHeight": 42,
+      "poses": {
+        "down": { "rect": [150,620,261,242] },
+        "up": { "rect": [468,620,252,242] },
+        "left": { "rect": [765,620,251,242] },
+        "right": { "rect": [1057,620,252,242], "flipX": true }
+      }
+    },
+    "bounty": {
+      "src": "characters-original.jpeg", "removeWhiteBorder": true, "displayHeight": 36,
+      "poses": {
+        "down": { "rect": [232,867,177,214] },
+        "up": { "rect": [486,867,181,214] },
+        "left": { "rect": [789,867,205,214] },
+        "right": { "rect": [1073,867,190,214], "flipX": true }
+      }
+    },
+    "bed": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 175, "poses": { "down": { "rect": [0,0,732,568] } } },
+    "nightstand": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 64, "lightPoint": [0.72,0.01], "poses": { "down": { "rect": [748,200,330,339] } } },
+    "wardrobe": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 181, "poses": { "down": { "rect": [1135,10,365,535] } } },
+    "tvCabinet": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 112, "poses": { "down": { "rect": [54,557,526,455] } } },
+    "chair": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 80, "poses": { "down": { "rect": [694,600,321,399] } } },
+    "airPurifier": { "src": "furniture-atlas.png", "trimAlpha": 128, "displayHeight": 60, "poses": { "down": { "rect": [1192,637,279,346] } } }
+  }
+}
