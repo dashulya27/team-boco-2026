@@ -1,13 +1,15 @@
 {
   "name": "team-boco-2026",
-  "version": "1.4.1",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node scripts/serve.mjs",
     "build:room": "node scripts/build-room.mjs",
-    "test": "node tests/mission.mjs && node tests/playthrough.mjs && node tests/finale-ui.mjs && node tests/access.cjs && node tests/package.mjs && node tests/server.mjs",
-    "test:browser": "node tests/browser.cjs"
+    "build:preview": "node scripts/build-preview.mjs",
+    "test": "node tests/mission.mjs && node tests/playthrough.mjs && node tests/finale-ui.mjs && node tests/access.cjs && node tests/camera.mjs && node tests/package.mjs && node tests/server.mjs",
+    "test:browser": "node tests/browser.cjs",
+    "test:render": "node tests/journey.cjs"
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.100",

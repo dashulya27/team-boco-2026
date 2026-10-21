@@ -1,18 +1,43 @@
-import { createCatIslandLevel } from "./cat-island.js?v=1.4.1";
-import { createMissionController } from "./mission.js?v=1.4.1";
-import { createRoomBackground } from "./room-background.js?v=1.4.1";
+import { createCatIslandLevel } from "./cat-island.js?v=1.7.0";
+import { createMissionController } from "./mission.js?v=1.7.0";
+import { createRoomBackground } from "./room-background.js?v=1.7.0";
+import { loadSpriteAssets } from "./sprite-assets.js?v=1.7.0";
+import { ROOM_BULBS } from './room-layout.js?v=1.7.0';
+import { drawFinaleIsland, drawFutureIsland } from './finale-island.js?v=1.7.0';
 
-const BUILD_VERSION = "1.4.1";
+import { createPaperAccessController, safeSessionStorage } from './paper-access.js?v=1.7.0';
+import { createWorldCamera, WORLD_VIEWPORT, WORLD_NODES, drawNeonConnection } from './world-camera.js?v=1.7.0';
+import { drawEntryIsland } from './finale-island.js?v=1.7.0';
+
+const BUILD_VERSION = "1.7.0";
+const IS_PREVIEW = false;
+const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches??false;
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const missionPanel = document.getElementById('mission-panel');
-const mission = createMissionController(missionPanel, window.sessionStorage);
+const storage=IS_PREVIEW?safeSessionStorage({}):safeSessionStorage(window);
+const mission = createMissionController(missionPanel,storage,{onClose:returnToMap,onComplete:completeFinale});
+const paperPanel=document.getElementById('paper-entry');
+const paperAccess=createPaperAccessController(paperPanel,storage,{preview:IS_PREVIEW,onEnter:completePaperAccess,onLock:lockWorld});
+const paperArt=document.getElementById('entry-art');
+const worldDock=document.getElementById('world-dock');
+const camera=createWorldCamera({reducedMotion});
+let pendingIsland=null,entryElapsed=0;
+let drag=null,lastThumbnailTime=-100;
+const WORLD_DESCRIPTIONS=[
+  'Coco und Bounty sind wieder wach. Eine kleine Nachtschicht für unseren Lieblingsmenschen.',
+  'Eine letzte Nachricht. Dein Schlüssel aus der Papier-Mission ist schon im Decoder.',
+  'Hier wachsen unsere nächsten Geschichten. Schau dich um — wir bauen noch weiter. ♥'
+];
 
 ctx.imageSmoothingEnabled = false;
 
 const keys = new Set();
 const pointer = { x: 0, y: 0 };
+let paused=false;
+let roomThumbnail, finalThumbnail, futureThumbnail;
+let selectedIsland=0, mapNotice='', mapNoticeUntil=0;
 
 const KEY_BY_CODE = {
   KeyW: "w",
@@ -26,20 +51,19 @@ const KEY_BY_CODE = {
   ArrowLeft: "arrowleft",
   ArrowRight: "arrowright",
   Escape: "escape",
-  Enter: "enter"
+  Enter: "enter",
+  Digit1:"1", Digit2:"2", Digit3:"3"
 };
 
 const gameState = {
   scene: "map",
-  catIslandCompleted: mission.progress.cats
+  catIslandCompleted: mission.progress.cats,
+  finaleCompleted: mission.progress.complete
 };
 
-const mapIsland = {
-  x: 295,
-  y: 150,
-  width: 370,
-  height: 250
-};
+const [mapIsland,finalMapIsland,futureMapIsland]=WORLD_NODES;
+const moduleRows = [0,1,2].map(i=>({x:27,y:141+i*86,width:146,height:72}));
+const worldNodes=WORLD_NODES;
 
 const stars = createStars(96);
 
@@ -58,18 +82,28 @@ let catIsland;
 
 async function start() {
   try {
-    const roomImage = await loadImage(
+    const [roomImage, assets] = await Promise.all([loadImage(
       `./assets/rooms/cat-room/cat-room-structure.png?v=${BUILD_VERSION}`
-    ).catch(() => createRoomBackground(document));
+    ).catch(() => createRoomBackground(document)),loadSpriteAssets()]);
 
     catIsland = createCatIslandLevel({
       canvas,
       ctx,
       roomImage,
+      assets,
       onExit: returnToMap,
       onComplete: completeCatIsland
     });
 
+    catIsland.draw(0,{interface:false});
+    roomThumbnail=document.createElement('canvas');roomThumbnail.width=960;roomThumbnail.height=640;
+    roomThumbnail.getContext('2d').drawImage(canvas,0,0);
+
+    finalThumbnail=document.createElement('canvas');finalThumbnail.width=960;finalThumbnail.height=640;
+    futureThumbnail=document.createElement('canvas');futureThumbnail.width=960;futureThumbnail.height=640;
+    if(gameState.catIslandCompleted)selectedIsland=1;
+    document.getElementById('preview-tools').hidden=!IS_PREVIEW;
+    paperAccess.start();
     requestAnimationFrame(gameLoop);
   } catch (error) {
     drawLoadError(error.message);
@@ -77,92 +111,189 @@ async function start() {
   }
 }
 
-function enterCatIsland() {
-  if (!catIsland) return;
-  if (gameState.catIslandCompleted) { mission.open(); return; }
+function enterCatIsland(restart = false) {
+  if (!catIsland || !paperPanel.hidden) return;
+  if(restart || catIsland.getSnapshot().phase==='win') catIsland.reset();
   gameState.scene = "catIsland";
   document.body.dataset.scene = "catIsland";
   keys.clear();
-  catIsland.reset();
+  canvas.focus({preventScroll:true});
 }
 
 function returnToMap() {
+  if(!paperPanel.hidden)return;
+  pendingIsland=null;camera.overview();worldDock.hidden=true;document.body.dataset.mapFocus='false';
   gameState.scene = "map";
   document.body.dataset.scene = "map";
   keys.clear();
+  document.querySelector('.game-shell').inert=false;
+  canvas.focus({preventScroll:true});
+}
+
+function enterFinaleIsland() {
+  if(!paperPanel.hidden)return;
+  if(IS_PREVIEW&&!gameState.catIslandCompleted){mission.recordCats();gameState.catIslandCompleted=true;}
+  if(!gameState.catIslandCompleted){showMapNotice('Coco und Bounty brauchen dich noch. Danach wartet deine letzte Nachricht. ♥');return;}
+  keys.clear();gameState.scene='finaleIsland';document.body.dataset.scene='finaleIsland';
+  mission.open();document.querySelector('.game-shell').inert=true;
+}
+function completeFinale() {
+  gameState.finaleCompleted=true;
+  document.getElementById('game-status').textContent='Die Nachricht ist entschlüsselt. Dein Geburtstagsgeschenk wurde enthüllt.';
+}
+function showMapNotice(message) {
+  mapNotice=message;mapNoticeUntil=performance.now()+4200;
+  document.getElementById('game-status').textContent=message;
+}
+function activateIsland(index=selectedIsland) {
+  if(!paperPanel.hidden)return;
+  selectedIsland=index;pendingIsland=null;worldDock.hidden=true;
+  if(index===0)enterCatIsland();
+  else if(index===1)enterFinaleIsland();
+  else {gameState.scene='futureIsland';document.body.dataset.scene='futureIsland';keys.clear();canvas.focus({preventScroll:true});}
+}
+function lockWorld(){
+  pendingIsland=null;keys.clear();worldDock.hidden=true;
+  document.body.dataset.scene='entry';document.querySelector('.game-shell').inert=true;
+}
+function completePaperAccess(key){
+  mission.usePaperKey(key);document.querySelector('.game-shell').inert=false;
+  document.body.dataset.scene=gameState.scene;
+  document.getElementById('game-status').textContent='Dein Papier-Schlüssel passt. Willkommen in unserer kleinen Welt.';
+  canvas.focus({preventScroll:true});
+}
+function focusIsland(index,{enterAfter=false}={}){
+  if(!paperPanel.hidden)return;
+  selectedIsland=index;camera.focus(index);pendingIsland=enterAfter?{index,time:0}:null;
+  updateWorldDock();
+}
+function beginIslandTransition(index=selectedIsland){
+  if(pendingIsland?.index===index)return;
+  if(index===1&&!gameState.catIslandCompleted&&!IS_PREVIEW){
+    focusIsland(index);showMapNotice('Nach der Nachtschicht öffnet sich deine letzte Nachricht. ♥');return;
+  }
+  focusIsland(index,{enterAfter:true});
+}
+function updateWorldDock(){
+  worldDock.hidden=gameState.scene!=='map'||camera.focused===null||!paperPanel.hidden;
+  document.body.dataset.mapFocus=worldDock.hidden?'false':'true';
+  if(worldDock.hidden)return;
+  document.getElementById('world-focus-title').textContent=['01 // KATZENINSEL','02 // GESCHENKINSEL','03 // UNSER NÄCHSTES ABENTEUER'][selectedIsland];
+  document.getElementById('world-focus-description').textContent=WORLD_DESCRIPTIONS[selectedIsland];
+  const open=document.getElementById('world-open');open.disabled=selectedIsland===1&&!gameState.catIslandCompleted&&!IS_PREVIEW;
+  open.textContent=selectedIsland===2?'INSEL ANSEHEN':selectedIsland===1&&gameState.finaleCompleted?'DEIN GEBURTSTAGSGRUSS':open.disabled?'NACH DER NACHTSCHICHT':'INSEL BETRETEN';
+  document.getElementById('world-zoom-value').textContent=Math.round(camera.targetZoom*100)+'%';
 }
 
 function completeCatIsland() {
   gameState.catIslandCompleted = true;
   keys.clear();
-  mission.completeCats();
+  mission.recordCats();
+  selectedIsland=1;
+  document.getElementById('game-status').textContent='Nachtschicht geschafft. Paw Token gesammelt. Die letzte Insel ist jetzt erreichbar. Enter öffnet die Weltkarte.';
 }
 
 function gameLoop(timestamp) {
   const deltaTime = Math.min((timestamp - (gameLoop.lastTime ?? timestamp)) / 1000, 0.05);
   gameLoop.lastTime = timestamp;
 
-  if (gameState.scene === "map") {
-    drawWorldMap(timestamp);
-  } else {
-    catIsland.update(deltaTime, keys);
+  const artTime=reducedMotion?2000:timestamp;
+  if(!paperPanel.hidden){
+    drawEntryIsland(ctx,artTime,catIsland.assets,{background:true});
+    drawEntryIsland(paperArt.getContext('2d'),artTime,catIsland.assets,{background:true});
+  } else if (gameState.scene === "map") {
+    camera.update(deltaTime);
+    if(pendingIsland){pendingIsland.time+=deltaTime;if(pendingIsland.time>=(reducedMotion?0:.58)){const index=pendingIsland.index;pendingIsland=null;activateIsland(index);}}
+    drawWorldMap(artTime,timestamp);updateWorldDock();
+  } else if(gameState.scene === "catIsland") {
+    if(!paused) catIsland.update(deltaTime, keys);
     catIsland.draw(timestamp);
+    if(paused && catIsland.getSnapshot().phase!=='win') {
+      ctx.fillStyle='rgba(2,6,15,.65)';ctx.fillRect(0,0,960,640);
+      drawText('PAUSE // ZUM SPIEL ZURÜCKKEHREN',480,320,20,'#f2d448','center');
+    }
+  } else if(gameState.scene==='finaleIsland'){
+    drawFinaleIsland(ctx,artTime,catIsland.assets,{complete:mission.progress.complete,background:true});
+  } else {
+    drawFutureIsland(ctx,artTime,catIsland.assets,{background:true});
+    drawText('HIER WACHSEN UNSERE NÄCHSTEN GESCHICHTEN.',480,566,16,'#e7c8ad','center');
+    drawText('Ein bisschen Zukunft. Ein bisschen wir. ♥',480,593,13,'#b29eb9','center');
   }
-
+  if(paperPanel.hidden)mission.draw(artTime,catIsland.assets);
   requestAnimationFrame(gameLoop);
 }
 
-function drawWorldMap(timestamp) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#010309";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function drawWorldMap(timestamp,clock=timestamp) {
+  catIsland.draw(timestamp,{interface:false});
+  const previewCtx=roomThumbnail.getContext('2d');previewCtx.clearRect(0,0,960,640);previewCtx.drawImage(canvas,0,0);
+  drawFinaleIsland(finalThumbnail.getContext('2d'),timestamp,catIsland.assets,{complete:gameState.finaleCompleted,locked:!gameState.catIslandCompleted});
+  drawFutureIsland(futureThumbnail.getContext('2d'),timestamp,catIsland.assets);
+  ctx.clearRect(0,0,960,640);ctx.fillStyle='#10101c';ctx.fillRect(0,0,960,640);
+  drawStars(timestamp);drawMapGrid();
+  drawMapHeart(900,543,2,'#bb849e');drawMapHeart(254,468,1.5,'#b99b7a');
+  // A connected little world: the OS reference informs layout, not the mood.
+  ctx.fillStyle='rgba(31,25,43,.91)';ctx.fillRect(17,17,926,62);ctx.fillRect(17,94,166,513);
+  ctx.strokeStyle='#66526b';ctx.lineWidth=1;ctx.strokeRect(17.5,17.5,925,61);ctx.strokeRect(17.5,94.5,165,512);ctx.strokeRect(196.5,94.5,746,512);
+  ctx.fillStyle='#e3bd83';ctx.fillRect(17,17,4,62);ctx.fillRect(197,95,13,4);
+  drawText('BOCO // OUR LITTLE WORLD',37,41,23,'#edcd93');
+  drawText('FÜR MEINEN LIEBLINGSMENSCHEN',38,65,10,'#ad9cb7');
+  drawText('BIRTHDAY EDITION 2026',921,38,12,'#c7cebd','right');
+  drawText((gameState.finaleCompleted?'HAPPY BIRTHDAY, MY MVP ♥':'COCO + BOUNTY ARE WAITING ♥'),921,60,10,'#dba9be','right');
+  drawText('UNSERE INSELN',29,117,10,'#95a9a3');
+  const labels=['KATZENINSEL','GESCHENKINSEL','NEXT UPDATE'];
+  const states=[gameState.catIslandCompleted?'GESCHAFFT / ♥':'NACHTSCHICHT / BEREIT',gameState.finaleCompleted?'FÜR DICH / ♥':gameState.catIslandCompleted?'DEINE LETZTE NACHRICHT':'NACH DER NACHTSCHICHT','COMING SOON'];
+  moduleRows.forEach((row,i)=>{
+    const selected=i===selectedIsland,available=i===0||(i===1&&gameState.catIslandCompleted);
+    ctx.fillStyle=selected?'#392d41':'#201b2c';ctx.fillRect(row.x,row.y,row.width,row.height);
+    ctx.strokeStyle=selected?'#e3bd83':'#54405e';ctx.strokeRect(row.x+.5,row.y+.5,row.width-1,row.height-1);
+    drawText('0'+(i+1)+' // '+labels[i],row.x+8,row.y+17,10,selected?'#f4d99e':'#c2aec9');
+    drawText(states[i],row.x+8,row.y+39,8,available?'#d7acbf':'#9a86a6');
+    ctx.fillStyle='#4c3b56';ctx.fillRect(row.x+8,row.y+55,128,3);
+    ctx.fillStyle=selected?'#e7c58d':'#a283a4';ctx.fillRect(row.x+8,row.y+55,i===2?22:available?128:12,3);
+  });
+  drawText('UNSER KLEINES TEAM',29,449,10,'#ba9db9');
+  const logo=catIsland.assets.get('logo')?.image;
+  if(logo)ctx.drawImage(logo,58,465,84,84);
+  drawText('DOMINIK + DARINA',100,563,9,'#c8c9ae','center');
+  drawText('COCO + BOUNTY',100,582,9,'#8fa89f','center');
+  drawText('DREI INSELN / EINE KLEINE WELT',217,115,10,'#76958c');
+  drawText((Number(gameState.catIslandCompleted)+Number(gameState.finaleCompleted))+' / 2 ABENTEUER GESCHAFFT',920,115,9,'#b1b9a4','right');
 
-  drawStars(timestamp);
-  drawMapGrid();
-
-  drawText("BOCO // WORLD MAP", 36, 46, 22, "#f2d94b", "left");
-  drawText("MISSION NODE 02", 36, 72, 12, "#65718b", "left");
-
-  const pulse = 0.55 + Math.sin(timestamp / 420) * 0.18;
-
-  ctx.save();
-  ctx.shadowColor = gameState.catIslandCompleted ? "#62e69a" : "#f0d43e";
-  ctx.shadowBlur = 26 * pulse;
-  ctx.strokeStyle = gameState.catIslandCompleted ? "#62e69a" : "#f0d43e";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(
-    mapIsland.x - 9,
-    mapIsland.y - 9,
-    mapIsland.width + 18,
-    mapIsland.height + 18
-  );
+  ctx.save();ctx.beginPath();ctx.rect(WORLD_VIEWPORT.x,WORLD_VIEWPORT.y,WORLD_VIEWPORT.width,WORLD_VIEWPORT.height);ctx.clip();camera.apply(ctx);
+  // Soft neon bridges share the island camera; particles travel along the entire path.
+  drawNeonConnection(ctx,[[540,275],[581,275],[581,327],[610,327],[636,355]],timestamp,{active:gameState.catIslandCompleted});
+  drawNeonConnection(ctx,[[748,407],[748,440],[591,440],[591,470],[505,495]],timestamp,{future:true});
+  ctx.globalAlpha=.94;ctx.drawImage(roomThumbnail,mapIsland.x,mapIsland.y,mapIsland.width,mapIsland.height);ctx.globalAlpha=1;
+  ctx.drawImage(finalThumbnail,finalMapIsland.x,finalMapIsland.y,finalMapIsland.width,finalMapIsland.height);
+  ctx.drawImage(futureThumbnail,futureMapIsland.x,futureMapIsland.y,futureMapIsland.width,futureMapIsland.height);
+  const scale=mapIsland.width/960;
+  ROOM_BULBS.concat([[492,194]]).forEach(([x,y],i)=>{
+    const color=i>=6&&i<12?'hsl('+((timestamp/85+i*32)%360)+',80%,72%)':'#f9d885';
+    ctx.save();ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=6;
+    ctx.globalAlpha=.8+Math.sin(timestamp/330+i)*.12;
+    ctx.fillRect(Math.round(mapIsland.x+x*scale),Math.round(mapIsland.y+y*scale),2,2);ctx.restore();
+  });
+  worldNodeLabel(0,388,365,'01 // KATZENINSEL',gameState.catIslandCompleted?'CLEAR · NOCH EINE NACHT':'DREI SCHLÜSSEL · EINE NACHT');
+  worldNodeLabel(1,739,470,'02 // DIE LETZTE INSEL',gameState.finaleCompleted?'DEIN GEBURTSTAGSGRUSS ♥':gameState.catIslandCompleted?'VIGENÈRE · GESCHENK ENTDECKEN':'WIRD NACH DER NACHTSCHICHT FREI');
+  worldNodeLabel(2,423,577,'03 // NEXT UPDATE','UNSER NÄCHSTES ABENTEUER');
   ctx.restore();
-
-  ctx.globalAlpha = gameState.catIslandCompleted ? 0.92 : 0.8;
-  ctx.drawImage(
-    catIsland.roomImage,
-    mapIsland.x,
-    mapIsland.y,
-    mapIsland.width,
-    mapIsland.height
-  );
-  ctx.globalAlpha = 1;
-
-  drawText("02 // KATZENINSEL", 480, 442, 20, "#f2d94b", "center");
-  drawText(
-    gameState.catIslandCompleted ? "[ ENTER / CLICK ]  FINAL-TERMINAL ÖFFNEN" : "[ ENTER / CLICK ]  MISSION START",
-    480,
-    472,
-    13,
-    gameState.catIslandCompleted ? "#62e69a" : "#c3c9d5",
-    "center"
-  );
-
-  drawText("PAPIER → KATZENINSEL → VIGENÈRE → KOFFER", 480, 580, 12, "#8490a8", "center");
-  drawText("DREI SCHLÜSSEL ÖFFNEN DAS FINAL-TERMINAL", 480, 603, 11, "#65718b", "center");
-  drawText(`BUILD ${BUILD_VERSION}`, 924, 618, 10, "#333e54", "right");
+  if(clock<mapNoticeUntil){
+    ctx.fillStyle='rgba(6,16,20,.97)';ctx.fillRect(209,126,721,44);ctx.strokeStyle='#746f36';ctx.strokeRect(209.5,126.5,720,43);
+    drawText(mapNotice,220,148,10,'#eadb9b');
+  }
+  drawText('← / → AUSWÄHLEN · ENTER REISEN · ESC ÜBERSICHT',28,624,10,'#8da297');
+  drawText('BUILD '+BUILD_VERSION,929,624,9,'#536e64','right');
+  // Very subtle CRT texture; the game art stays clean and readable.
+  ctx.fillStyle='rgba(0,0,0,.055)';for(let y=18;y<605;y+=4)ctx.fillRect(18,y,924,1);
 }
-
+function worldNodeLabel(index,x,y,title,subtitle) {
+  const selected=selectedIsland===index;
+  drawText((selected?'▸ ':'')+title,x,y,14,selected?'#ffe16c':'#a9b5a8','center');
+  drawText(subtitle,x,y+21,8,index===2?'#72867e':'#9caba1','center');
+}
+function drawMapHeart(x,y,size,color) {
+  ctx.fillStyle=color;['0110110','1111111','1111111','0111110','0011100','0001000'].forEach((row,iy)=>[...row].forEach((v,ix)=>{if(v==='1')ctx.fillRect(x+ix*size,y+iy*size,size,size);}));
+}
 function drawStars(timestamp) {
   for (const star of stars) {
     const twinkle = 0.28 + ((Math.sin(timestamp / star.speed + star.phase) + 1) / 2) * 0.52;
@@ -251,9 +382,16 @@ function normalizedKeyboardKey(event) {
 }
 
 function dispatchKeyAction(key) {
-  if (!catIsland || !missionPanel.hidden) return;
+  if (!catIsland || !missionPanel.hidden || !paperPanel.hidden) return;
   if (gameState.scene === "map") {
-    if (key === "enter") enterCatIsland();
+    if(key==='arrowleft'||key==='a')focusIsland((selectedIsland+2)%3);
+    if(key==='arrowright'||key==='d')focusIsland((selectedIsland+1)%3);
+    if(key==='1'||key==='2'||key==='3')focusIsland(Number(key)-1);
+    if(key==='enter')beginIslandTransition();
+    if(key==='escape'){pendingIsland=null;camera.overview();worldDock.hidden=true;}
+    if(key==='r')enterCatIsland(true);
+  } else if(gameState.scene==='futureIsland'){
+    if(key==='escape'||key==='enter')returnToMap();
   } else {
     catIsland.handleKeyDown(key);
   }
@@ -267,7 +405,18 @@ function clearHeldKeys() {
 }
 
 window.addEventListener("keydown", (event) => {
-  if (!missionPanel.hidden || event.target?.closest?.('input, textarea, button, summary')) return;
+  if(!paperPanel.hidden){paperAccess.handleKeyDown(event);return;}
+  if(!missionPanel.hidden) {
+    if(event.key==='Escape'){event.preventDefault();mission.handleKeyDown('escape');}
+    if(event.key==='Tab'){
+      const focusable=[...missionPanel.querySelectorAll('button,input,summary')].filter(e=>!e.disabled&&!e.closest('[hidden]'));
+      const first=focusable[0],last=focusable.at(-1);
+      if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+    }
+    return;
+  }
+  if(event.target?.closest?.('input, textarea, button, summary'))return;
   const key = normalizedKeyboardKey(event);
 
   if (["w", "a", "s", "d", "e", "r", "escape", "enter", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
@@ -284,8 +433,10 @@ window.addEventListener("keyup", (event) => {
   keys.delete(normalizedKeyboardKey(event));
 });
 
-window.addEventListener("blur", clearHeldKeys);
+window.addEventListener("blur", () => { paused=true;clearHeldKeys(); });
+window.addEventListener("focus", () => { paused=false; });
 document.addEventListener("visibilitychange", () => {
+  paused=document.hidden;
   if (document.hidden) clearHeldKeys();
 });
 
@@ -319,19 +470,55 @@ document.querySelectorAll(".touch-tap").forEach((button) => {
   });
 });
 
-canvas.addEventListener("pointermove", (event) => {
-  Object.assign(pointer, canvasPoint(event));
-});
-
-canvas.addEventListener("pointerdown", (event) => {
-  if (!catIsland || !missionPanel.hidden) return;
-  const point = canvasPoint(event);
-
-  if (gameState.scene === "map") {
-    if (pointInside(mapIsland, point)) enterCatIsland();
-  } else {
-    catIsland.handlePointerDown(point);
+canvas.addEventListener("pointermove",(event)=>{
+  const point=canvasPoint(event);Object.assign(pointer,point);
+  if(drag&&gameState.scene==='map'&&paperPanel.hidden){
+    const dx=point.x-drag.last.x,dy=point.y-drag.last.y;
+    if(Math.hypot(point.x-drag.start.x,point.y-drag.start.y)>6)drag.moved=true;
+    if(drag.moved){pendingIsland=null;camera.panBy(dx,dy);}
+    drag.last=point;
   }
 });
+canvas.addEventListener("pointerdown",(event)=>{
+  if(!catIsland||!missionPanel.hidden||!paperPanel.hidden)return;
+  const point=canvasPoint(event);
+  if(gameState.scene==='map'){drag={start:point,last:point,moved:false};canvas.setPointerCapture?.(event.pointerId);}
+  else if(gameState.scene==='catIsland')catIsland.handlePointerDown(point);
+});
+canvas.addEventListener("pointerup",(event)=>{
+  if(!drag)return;
+  const moved=drag.moved;drag=null;
+  if(moved||gameState.scene!=='map'||!paperPanel.hidden)return;
+  const point=canvasPoint(event),worldPoint=camera.screenToWorld(point);
+  const row=moduleRows.findIndex(rect=>pointInside(rect,point));
+  const index=worldNodes.findIndex(rect=>pointInside(rect,worldPoint));
+  if(row>=0)focusIsland(row);
+  else if(pointInside(WORLD_VIEWPORT,point)&&index>=0){
+    if(camera.focused===index)beginIslandTransition(index);else focusIsland(index);
+  }
+});
+canvas.addEventListener('pointercancel',()=>{drag=null;});
+canvas.addEventListener('wheel',event=>{
+  if(gameState.scene!=='map'||!paperPanel.hidden)return;
+  event.preventDefault();pendingIsland=null;camera.zoomBy(event.deltaY<0 ? .15 : -.15,selectedIsland);updateWorldDock();
+},{passive:false});
+document.getElementById('world-open').addEventListener('click',()=>beginIslandTransition());
+document.getElementById('world-overview').addEventListener('click',()=>{pendingIsland=null;camera.overview();worldDock.hidden=true;canvas.focus({preventScroll:true});});
+document.getElementById('world-return').addEventListener('click',returnToMap);
+document.querySelectorAll('[data-map-zoom]').forEach(button=>button.addEventListener('click',()=>{
+  pendingIsland=null;camera.zoomBy(Number(button.dataset.mapZoom),selectedIsland);updateWorldDock();
+}));
+document.querySelectorAll('[data-preview]').forEach(button=>button.addEventListener('click',()=>{
+  if(!IS_PREVIEW)return;
+  const scene=button.dataset.preview;
+  if(scene==='entry'){if(!missionPanel.hidden)mission.close();paperAccess.show();return;}
+  paperAccess.unlock('SIMPLE',{persist:false});
+  if(!missionPanel.hidden)mission.close();
+  if(scene==='map')returnToMap();
+  if(scene==='cats'){mission.resetPreview();gameState.catIslandCompleted=false;gameState.finaleCompleted=false;enterCatIsland(true);}
+  if(scene==='final'){mission.previewPuzzle();gameState.catIslandCompleted=true;gameState.finaleCompleted=false;gameState.scene='finaleIsland';document.body.dataset.scene='finaleIsland';document.querySelector('.game-shell').inert=true;}
+  if(scene==='future')activateIsland(2);
+  if(scene==='birthday'){mission.previewBirthday();gameState.catIslandCompleted=true;gameState.finaleCompleted=true;gameState.scene='finaleIsland';document.body.dataset.scene='finaleIsland';document.querySelector('.game-shell').inert=true;}
+}));
 
 start();

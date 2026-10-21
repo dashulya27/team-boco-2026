@@ -25,6 +25,8 @@ function route(player,target){
 let path=[], jumps=0;
 for(let frame=0;frame<18000;frame++){
  const s=level.getSnapshot();assert.ok(s.catsInsideBounds,'Cat left safe floor');
+ assert.ok(s.catsOutsideFurniture,'Cat crossed furniture');
+ assert.ok(level.canPlayerStand(s.player.x,s.player.y),'Player entered furniture or left floor');
  if(s.phase==='win')break;
  jumps+=s.activeCats.some(c=>c.jumping)?1:0;
  const target=s.carrying?{x:140,y:350}:s.activeCats.reduce((a,b)=>!a||dist(b,s.player)<dist(a,s.player)?b:a,null);
@@ -40,4 +42,10 @@ for(let frame=0;frame<18000;frame++){
 }
 const end=level.getSnapshot();
 assert.equal(end.phase,'win',JSON.stringify(end));assert.equal(end.catsDelivered,3);assert.equal(completed,1);
+assert.ok(jumps>0,'The playthrough must include a real cat jump and landing');
+assert.equal(end.deliveries.length,3);assert.equal(new Set(end.deliveries).size,2);
+level.update(1/30,new Set(['e']));assert.equal(completed,1,'Win callback must not repeat');
+level.handleKeyDown('r');assert.equal(level.getSnapshot().phase,'intro');
+assert.equal(level.getSnapshot().catsDelivered,0);assert.equal(level.getSnapshot().elapsed,0);
+level.handleKeyDown('enter');assert.equal(level.getSnapshot().activeCats.length,2);
 console.log(`Playthrough: three deliveries, one completion callback, safe cat bounds (${jumps} jumping frames).`);

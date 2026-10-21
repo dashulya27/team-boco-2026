@@ -16,7 +16,8 @@ try {
   });
   for (const [file,type] of [['','text/html'],['game.html','text/html'],['main.js','text/javascript'],
     ['room-background.js','text/javascript'],['styles.css','text/css'],
-    ['assets/rooms/cat-room/cat-room-structure.png','image/png'],['assets/branding/boco.png','image/png']]) {
+    ['assets/rooms/cat-room/cat-room-structure.png','image/png'],['assets/branding/boco.png','image/png'],
+    ['assets/sprites/characters-original.jpeg','image/jpeg']]) {
     const response = await fetch(base+file);
     assert.equal(response.status,200,file);
     assert.ok(response.headers.get('content-type').startsWith(type),file);

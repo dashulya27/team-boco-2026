@@ -1,71 +1,91 @@
 # TEAM BOCO // DOMINIK 2026
 
-Vollständiges statisches Geburtstagsspiel, Version **1.4.1**.
-Die russische Anleitung zum Ersetzen des bestehenden Projekts steht in
-[START_HERE_RU.md](START_HERE_RU.md).
+Version **1.7.0**. Ein zusammenhängendes, persönliches Pixel-Geburtstagsspiel:
+Papier-Caesar → Weltkarte → Katzeninsel → Vigenère-Insel → PC-Geburtstagsgruß.
+Der dritte Inselplatz ist ein detaillierter, besuchbarer Zukunftsort ohne Pflichtaufgabe.
 
-**Ablauf:** Papier-Caesar → SIMPLE → Katzeninsel mit drei Lieferungen →
-Vigenère → Binär/ASCII → Geschenk bei BOMBSITE A mit Koffer-Code 3427.
-Enthalten sind eine spielbare Katzeninsel und das komplette Rätsel-Finale.
+![Unsere kleine Welt](docs/previews/world.png)
 
-## Start und Veröffentlichung
+Russische Anleitung: [START_HERE_RU.md](START_HERE_.md).
 
-Zieladresse: https://dashulya27.github.io/team-boco-2026/
+## Spiel und Vorschau
 
-Alle Laufzeitdateien, das Original-BOCO-Logo, ein QR-Code zur Zieladresse und
-ein eigenständig gezeichneter Raumhintergrund sind enthalten. Kein Backend,
-keine API-Schlüssel und kein Build-Schritt sind zum Spielen erforderlich.
+Die normale Website beginnt mit genau einem Papier-Eingang. SIMPLE oder die ganze
+entschlüsselte Caesar-Nachricht öffnet die Welt. Groß-/Kleinschreibung und Leerzeichen
+sind egal. Der Schlüssel bleibt in der Browser-Tab-Sitzung erhalten und wird
+auf der Vigenère-Insel automatisch eingesetzt. Es gibt keinen zweiten Eingangsbildschirm.
 
-In PhpStorm `index.html` mit **Open in Browser** öffnen. Die URL muss mit
-`http://` beginnen, nicht mit `file://`.
+BOCO_PREVIEW.html ist die separate Vorschau für Darina: direkt auf einem Computer
+im Browser öffnen, ohne Papier-Schlüssel oder Server. Die untere Vorschau-Leiste
+öffnet Welt, Katzen, Rätsel, Geburtstagsgruß, Zukunftsinsel oder Eingang direkt.
+Sie benutzt eigenen flüchtigen Speicher und verändert den echten Spielstand nicht.
+Die normale Website zeigt diese Vorschau-Leiste nicht.
 
-Alternativ, wenn Node.js installiert ist:
+Für die normale Mehrdateien-Version in PhpStorm index.html mit Open in Browser
+öffnen, oder mit installiertem Node.js:
 
 ```bash
 npm start
 ```
 
-Danach http://127.0.0.1:5500/ öffnen. Hierfür ist `npm install` nicht erforderlich.
-Mit Python funktioniert auch `python -m http.server 5500` im Projektordner.
+Dann http://127.0.0.1:5500/ öffnen. Dafür ist kein npm install erforderlich.
+Auf dem iPhone die veröffentlichte Website verwenden; die lokale HTML-Vorschau
+in Dateien führt das Spiel nicht zuverlässig aus.
 
-GitHub Pages: Dateien im Stamm des bestehenden Repositories veröffentlichen;
-bei Veröffentlichung aus einem Branch `main` und `/(root)` wählen.
-Die neue Version ist erst nach Commit, Push und erfolgreichem Pages-Deployment online.
+## Welt und Kamera
 
-## Steuerung und Fortschritt
+Ein Klick auf eine Insel oder die linke Liste nähert die Kamera weich an.
+Die scharfe Pixelgrafik bleibt erhalten. INSEL BETRETEN startet die Reise;
+ein zweiter Klick auf die ausgewählte Insel geht ebenfalls. Links/rechts oder
+1/2/3 wählen, Enter fliegt zur Insel. Esc oder ÜBERSICHT entfernt die Kamera.
+Plus/Minus, Mausrad und Ziehen ergänzen den Zoom. Reduced Motion wird berücksichtigt.
+Auf einem Touch-Gerät im Hochformat liegen die Zoomtasten unter dem Bild.
 
-Enter/Klick startet die Insel und das Intro; WASD/Pfeile bewegen Dominik.
-E halten nimmt eine nahe Katze auf. Zur offenen Tür laufen, um sie abzugeben.
+Die Verbindungen haben mehrere sanfte Neonlagen und wandernde Lichtpunkte.
+Alle Inseln teilen eine 480×320-Pixelbasis. Raum: schwebendes Fundament, Bücherregal,
+Katzenportrait, Möbel und lebendige Lampen. Finale: Lesetisch, Decoder-Rad, Bücher,
+Pflanzen und der Geburtstags-PC. Zukunft: Werkbank, Plan, Bücher, Katzenkorb,
+Wimpel und Laternen; mit WELTKARTE oder Esc zurückkehren.
+
+## Ablauf
+
+Auf der Katzeninsel: Enter/Klick steht auf, WASD/Pfeile bewegen,
+E halten nimmt eine nahe Katze auf. Zur leuchtenden Tür laufen.
 Die erste Katze kehrt einmal zurück: insgesamt drei Lieferungen.
-R startet das Level neu, Esc öffnet die Karte. Touch-Geräte haben Bildschirmtasten.
+Esc öffnet die Weltkarte, R startet die Nacht neu. Fokusverlust pausiert das Level.
 
-Nach drei Lieferungen öffnet sich das Final-Terminal automatisch.
-Fortschritt bleibt beim Neuladen im selben Browser-Tab erhalten (`sessionStorage`).
-Für einen frischen Spieldurchlauf ein neues privates Browserfenster öffnen.
-Der Zugang ist ein Spielrätsel, keine technische Zugriffssicherung.
+Nach dem Sieg wartet Insel 2. Dort den Vigenère mit der gedruckten Tabelle lösen
+und BOMBSITE A eingeben oder den bereits eingesetzten Schlüssel im animierten
+Decoder verwenden. GESCHENK ENTDECKEN zeigt danach den PC und Darinas Gruß.
+Keine zusätzliche Binär-Code-Abfrage. Der vorhandene Koffer-Code 3427 bleibt
+als aufklappbarer Hinweis im fertigen Gruß.
 
-## Prüfungen
+## Veröffentlichen und prüfen
+
+Ziel: https://dashulya27.github.io/team-boco-2026/
+Paketinhalt in den bestehenden Klon kopieren, .git behalten, Commit/Push in PhpStorm.
+Diese lokale Version wurde nicht automatisch veröffentlicht. Der bisherige QR
+bleibt passend, wenn er auf diese Adresse zeigt; eine vorhandene Papierkopie wurde
+nicht gescannt.
 
 ```bash
 npm test
+npm install
+npm run build:room
+npm run build:preview
+npm run test:render
 ```
 
-Die Standardtests benötigen nur Node.js. Sie prüfen Antworten, den tatsächlichen
-Spielablauf mit drei Lieferungen, das Finale, den Eingang, die Dateien und den lokalen Server.
+Standardtests benötigen nur Node.js und prüfen den Papier-Eingang, Kamera-Geometrie,
+Spielablauf, Vigenère und Dateien. Der Canvas-Integrationstest nutzt @napi-rs/canvas:
+tatsächlicher Eingang → Zoom und Trefferprüfung → drei Katzenlieferungen →
+Kartenflug → automatischer Schlüssel → PC-Gruß → Zukunftsinsel und Vorschau.
+Die Bilder in docs/previews sind Canvas-Ausgaben, keine Browser-Screenshots.
+Die neue Oberfläche wurde hier nicht im Browser/Safari geprüft.
 
-Optionale Browserprüfung und Erzeugung des bereits enthaltenen Hintergrunds:
+Optional auf einem Computer mit Browserzugriff:
 
 ```bash
-npm install
 npx playwright install chromium
 npm run test:browser
-npm run build:room
 ```
-
-Die Browserprüfung startet einen eigenen Testserver unter `/team-boco-2026/`.
-Testbilder landen in `test-artifacts/` und gehören nicht in das veröffentlichte Paket.
-Weitere Details und die Reihenfolge der Papiermaterialien: [INTEGRATION.md](INTEGRATION.md).
-
-Quellen für den Veröffentlichungsweg:
-[PhpStorm: Open in Browser](https://www.jetbrains.com/help/phpstorm/running-applications.html),
-[GitHub Pages: Publishing source](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site).

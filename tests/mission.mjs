@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
-import { FINAL_CIPHER, FINAL_BINARY, decodeVigenere, checkLocation, checkCaseCode, readProgress } from '../mission.js';
+import { FINAL_CIPHER, FINAL_BINARY, decodeVigenere, vigenereSteps, checkLocation, checkCaseCode, readProgress } from '../mission.js';
 assert.equal(decodeVigenere(FINAL_CIPHER,'SIMPLE'), 'DAS GESCHENK IST BEI BOMBSITE A');
+const steps=vigenereSteps(FINAL_CIPHER,'SIMPLE').filter(s=>!s.space);
+assert.equal(steps.slice(0,9).map(s=>s.key).join(''),'SIMPLESIM','Spaces must not consume key letters');
+assert.equal(steps.map(s=>s.plain).join(''),'DASGESCHENKISTBEIBOMBSITEA');
+assert.throws(()=>vigenereSteps(FINAL_CIPHER,''),/Missing key/);
 assert.equal(FINAL_BINARY.split(' ').map(b=>String.fromCharCode(parseInt(b,2))).join(''),'3427');
 for(const value of ['BOMBSITE A','bombsite a','DAS GESCHENK IST BEI BOMBSITE A.']) assert.ok(checkLocation(value));
 for(const value of ['BOMBSITE B','BOCO','SIMPLE','']) assert.ok(!checkLocation(value));

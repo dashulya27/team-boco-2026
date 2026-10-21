@@ -6,6 +6,66 @@
 }
 
 [hidden] { display:none !important; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+canvas:focus { outline:none; }
+.paper-entry {position:fixed;inset:50% auto auto 50%;transform:translate(-50%,-50%);z-index:20;width:min(1080px,95vw);max-height:94dvh;overflow:auto;display:grid;grid-template-columns:1fr 1fr;background:#191525;border:1px solid #b58b9f;box-shadow:0 0 0 100vmax #090914ed,0 0 90px #b576a223;color:#d7cbd8;}
+.paper-art-wrap {padding:28px 14px;background:radial-gradient(ellipse at center,#392b43,#141222 74%);align-self:center;}
+.paper-eyebrow,.paper-art-note {text-align:center;font-size:9px;letter-spacing:.08em;color:#c2a2b8;margin:0 8px;}
+.paper-art-wrap canvas {width:100%;height:auto;aspect-ratio:3/2;}
+.paper-copy {padding:clamp(24px,4vw,48px);border-left:1px solid #514057;}
+.paper-step {font-size:9px;color:#bea183;letter-spacing:.08em;}
+.paper-copy h1 {font-size:clamp(27px,3vw,39px);line-height:1.15;letter-spacing:-.04em;color:#efd2a3;margin:18px 0;}
+.paper-copy>p {font:15px/1.7 system-ui,sans-serif;color:#c8bacd;}
+.paper-copy label {display:block;font-size:12px;margin:28px 0 9px;color:#d9bfd0;}
+.paper-copy input {width:100%;min-width:0;padding:15px 12px;font:14px "Courier New",monospace;color:#f1debf;border:1px solid #99758e;border-radius:0;background:#110f1c;}
+.paper-copy button {width:100%;margin-top:12px;padding:16px 12px;min-height:46px;background:#e6c28c;color:#201c28;border:1px solid #f5dbb6;font:700 12px "Courier New",monospace;cursor:pointer;}
+.paper-copy #paper-feedback {font:12px/1.5 system-ui,sans-serif;color:#e6bdcd;}
+.paper-copy details {font:12px/1.7 system-ui,sans-serif;color:#b5a2bd;margin-top:17px;}
+.paper-copy summary {cursor:pointer;color:#d2b7c3;}
+.paper-copy .paper-keep {font:11px/1.6 "Courier New",monospace;color:#a58fac;margin-top:26px;}
+.paper-entry :focus-visible,.world-dock :focus-visible,.preview-tools :focus-visible {outline:2px solid #f1d6a2;outline-offset:3px;}
+.world-dock {position:absolute;z-index:4;left:21%;right:2%;bottom:6%;padding:12px 14px;border:1px solid #af819e;background:#1b1629f5;box-shadow:0 0 22px #be7ba32b;display:grid;gap:8px;}
+.world-focus-copy strong {font-size:12px;color:#efd3aa;}
+.world-focus-copy p {font:11px/1.4 system-ui,sans-serif;color:#bea9c7;margin:5px 0 0;}
+.world-focus-actions {display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+.world-focus-actions button {border:1px solid #82637f;background:#302438;color:#e7c8d3;min-height:38px;min-width:38px;padding:8px 10px;font:700 10px "Courier New",monospace;cursor:pointer;}
+.world-focus-actions #world-open {margin-left:auto;background:#e6c28e;color:#241b2a;border-color:#f0d6a5;}
+.world-focus-actions #world-open:disabled {opacity:.5;cursor:default;}
+#world-zoom-value {font-size:9px;color:#c3accd;}
+.world-return {display:none;position:absolute;left:3%;top:4%;z-index:5;min-height:44px;padding:10px 14px;border:1px solid #a887a3;background:#21192fe8;color:#ead0bb;font:700 12px "Courier New",monospace;cursor:pointer;}
+body[data-scene="futureIsland"] .world-return {display:block;}
+.preview-tools {position:fixed;bottom:4px;left:50%;transform:translateX(-50%);z-index:35;max-width:98vw;display:flex;align-items:center;gap:4px;padding:4px 6px;background:#211b2ee8;border:1px solid #765972;box-shadow:0 0 18px #a1759a15;white-space:nowrap;}
+.preview-tools>span {font-size:8px;color:#ad8ba7;padding:0 4px;}
+.preview-tools button {padding:8px 7px;border:1px solid #69526e;background:#302438;color:#e2c5cb;font:10px "Courier New",monospace;cursor:pointer;}
+body[data-scene="map"] #gameCanvas {touch-action:none;cursor:grab;}
+body[data-scene="map"] #gameCanvas:active {cursor:grabbing;}
+@media(max-width:760px) {
+  .paper-entry {grid-template-columns:1fr;max-height:96dvh;}
+  .paper-art-wrap {padding:17px 12px 6px;}
+  .paper-art-wrap canvas {width:min(100%,400px);margin:-10px auto -14px;}
+  .paper-copy {border-left:0;border-top:1px solid #514057;padding:24px;}
+  .paper-copy h1 {margin:13px 0;font-size:30px;}
+  .paper-copy label {margin-top:20px;}
+  .world-dock {padding:8px;gap:5px;bottom:6.5%;}
+  .world-focus-copy strong {font-size:9px;}
+  .world-focus-copy p {display:none;}
+  .world-focus-actions {gap:4px;}
+  .world-focus-actions button {font-size:8px;min-width:28px;min-height:32px;padding:6px;}
+  #world-zoom-value {font-size:8px;}
+  .preview-tools {gap:2px;padding:3px;}
+  .preview-tools>span {display:none;}
+  .preview-tools button {font-size:9px;padding:8px 6px;}
+  .paper-copy input,.mission-panel input {font-size:16px;}
+}
+@media(pointer:coarse) and (orientation:portrait) {
+  body[data-scene="map"][data-map-focus="true"] .game-frame {margin-bottom:160px;}
+  .world-dock {top:calc(100% + 8px);bottom:auto;left:0;right:0;padding:10px;}
+  .world-focus-copy strong {font-size:11px;}
+  .world-focus-copy p {display:block;font-size:11px;}
+  .world-focus-actions button {min-height:44px;min-width:44px;font-size:9px;}
+  .world-focus-actions [data-map-zoom] {font-size:18px;}
+  .mission-panel button {min-height:44px;}
+}
 .mission-panel {
   position:fixed; inset:50% auto auto 50%; transform:translate(-50%,-50%);
   z-index:10; width:min(740px,94vw); max-height:94dvh; overflow:auto;
@@ -13,6 +73,7 @@
   border:2px solid #f2d448; box-shadow:0 0 0 100vmax rgb(0 0 0 / 88%);
   line-height:1.6; font-family:system-ui,sans-serif;
 }
+
 .mission-panel h1 { color:#f2d448; font-size:clamp(20px,5vw,30px); line-height:1.2; }
 .mission-panel label { display:block; margin:22px 0 8px; font-weight:700; }
 .mission-panel input { display:block; width:100%; padding:14px; font:inherit; color:white; background:#02050b; border:1px solid #8191ac; border-radius:5px; }
@@ -21,6 +82,87 @@
 .mission-code { color:#f2d448; font-size:64px; letter-spacing:.16em; font-weight:900; }
 .mission-panel summary { cursor:pointer; color:#f2d448; }
 .mission-panel :focus-visible { outline:3px solid #f2d448; outline-offset:3px; }
+
+/* BOCO-OS / final island: a real workbench beside the living pixel scene. */
+.mission-panel {
+  width:min(1120px,96vw);max-height:94dvh;padding:0;overflow:auto;
+  background:#151320;border:1px solid #9d7c83;box-shadow:0 0 0 100vmax rgb(0 0 0 / 88%),0 0 70px #cfb14215;
+  font-family:"Courier New",ui-monospace,monospace;line-height:1.5;color:#c3cec8;
+  scrollbar-color:#637566 #101b20;
+}
+.finale-toolbar {position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 20px;border-bottom:1px solid #58475e;background:#201b2df5;}
+.finale-brand {font-size:10px;color:#b5bca7;letter-spacing:.08em;}
+.mission-panel .finale-back {margin:0;padding:8px 10px;background:transparent;color:#dbcd8a;border:1px solid #52604c;border-radius:0;font:700 11px "Courier New",monospace;}
+.finale-layout {display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);}
+.finale-scene {align-self:start;position:sticky;top:62px;padding:30px 12px 24px;background:radial-gradient(ellipse at 45% 47%,#30283e,#151320 70%);border-right:1px solid #51415d;}
+.finale-eyebrow {margin:0 14px;color:#cfbe69;font-size:11px;letter-spacing:.12em;}
+.finale-art {width:100%;height:auto;aspect-ratio:3/2;}
+.finale-scene-caption {font-size:9px;color:#80968b;text-align:center;margin:0 12px;letter-spacing:.08em;}
+.cipher-workbench {padding:28px 28px 32px;min-width:0;}
+.mission-panel h1 {font-family:"Courier New",monospace;margin:0 0 14px;font-size:clamp(24px,3vw,34px);line-height:1.15;color:#efd29a;letter-spacing:-.035em;}
+.finale-intro {font-family:system-ui,sans-serif;font-size:14px;color:#afc0b8;margin:0 0 22px;}
+.mission-panel label {font-size:11px;letter-spacing:.025em;margin:0 0 7px;color:#bdc6b7;}
+.mission-panel input {padding:11px 12px;border:1px solid #6d5775;border-radius:0;background:#100f1a;color:#e8e7cc;font:14px "Courier New",monospace;min-width:0;}
+.mission-panel button {font-family:"Courier New",monospace;border-radius:0;touch-action:manipulation;}
+.key-row {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;}
+.mission-panel .finale-primary,.mission-panel .finale-secondary {margin:0;padding:11px 12px;font:700 10px/1.3 "Courier New",monospace;letter-spacing:.015em;}
+.mission-panel .finale-primary {background:#e7c58d;border:1px solid #e7c58d;color:#141a17;}
+.mission-panel .finale-secondary {background:#292333;border:1px solid #7a617d;color:#d9d2a9;}
+.mission-panel button:disabled {opacity:.45;cursor:default;}
+.finale-feedback {min-height:0;font-size:11px;line-height:1.4;margin:8px 0 0;color:#e9cc80;}
+.finale-feedback:empty {display:none;}
+.cipher-box {margin:22px 0 0;padding:13px 11px;background:#100e1a;border:1px solid #57455d;}
+.cipher-label {font-size:8px;letter-spacing:.08em;color:#79978a;margin:0 0 10px;}
+.cipher-words {display:flex;flex-wrap:wrap;gap:10px 12px;}
+.cipher-word {display:inline-flex;gap:2px;}
+.mission-panel .cipher-tile {display:grid;gap:4px;min-width:22px;margin:0;padding:5px 3px;border:1px solid #4b3c58;background:#211a30;color:#d8cc90;font-size:13px;line-height:1;}
+.cipher-tile small {font-size:8px;color:#7caaa1;}
+.cipher-tile b {font-size:14px;color:#5a6e66;}
+.mission-panel .cipher-tile.is-selected {border-color:#ecd268;box-shadow:0 0 10px #e7c95720;}
+.cipher-tile.is-revealed b {color:#f4e4a1;}
+.vigenere-tool {margin-top:12px;padding:14px 12px;border:1px solid #6c566e;background:#211c2c;}
+.vigenere-equation {display:flex;gap:10px;align-items:center;justify-content:center;}
+.equation-part {display:grid;gap:2px;text-align:center;min-width:55px;}
+.equation-part small {font-size:8px;color:#8ca599;}
+.equation-part b {font-size:29px;color:#ead67f;line-height:1.3;}
+.equation-part:last-child b {color:#dfb8ca;}
+.equation-symbol {font-size:18px;color:#627c6e;}
+.vigenere-explanation {font-size:10px;color:#9bb2a5;text-align:center;margin:12px 0 10px;}
+.alphabet-strip {display:grid;grid-template-columns:repeat(9,1fr);gap:3px;}
+.alphabet-cell {display:grid;gap:2px;text-align:center;padding:5px 0;border:1px solid #2e453c;font-size:11px;background:#071117;}
+.alphabet-cell b {font-weight:400;color:#b5c9ba;}
+.alphabet-cell span {color:#718e82;}
+.alphabet-cell.is-target {border-color:#d8c356;background:#3c391f;}
+.alphabet-cell.is-target b,.alphabet-cell.is-target span {color:#ffe58a;}
+.decode-actions {display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-top:12px;}
+.decode-count {font-size:9px;color:#8da297;}
+.decoded-output {font-size:12px;line-height:1.6;letter-spacing:.045em;color:#e9d98c;margin:12px 0 0;min-height:20px;}
+.mission-panel .discover-gift {width:100%;margin-top:12px;}
+.answer-form {margin-top:20px;border-top:1px solid #31443c;padding-top:16px;}
+.answer-form input {margin-bottom:8px;}
+.finale-hint {margin-top:16px;color:#8da69a;font:12px/1.6 system-ui,sans-serif;}
+.mission-panel .finale-hint summary,.mission-panel .gift-code summary {color:#c2bb88;font:11px "Courier New",monospace;}
+.birthday-address {font:600 18px/1.5 system-ui,sans-serif;color:#eac7ce;margin:0 0 18px;}
+.birthday-message {white-space:pre-line;font:15px/1.8 system-ui,sans-serif;color:#d6ccd9;}
+.birthday-signature {white-space:pre-line;color:#dfc586;font:14px/1.7 system-ui,sans-serif;margin:22px 0;}
+.gift-location {padding:12px;border-left:3px solid #d8c158;background:#d8c1580b;color:#d7d0aa;font-size:11px;}
+.gift-code {margin:14px 0 24px;}
+.mission-code {font:700 34px "Courier New",monospace;letter-spacing:.14em;margin:8px 0;color:#f0d77e;}
+.is-celebration .finale-scene {background:radial-gradient(ellipse at 45% 47%,#3c2b3d,#151320 72%);}
+@media (max-width:760px) {
+  .mission-panel {width:96vw;max-height:96dvh;}
+  .finale-layout {grid-template-columns:1fr;}
+  .finale-scene {position:relative;top:0;border-right:0;border-bottom:1px solid #51415d;padding:18px 10px 14px;}
+  .finale-art {max-width:430px;margin:-8px auto -10px;}
+  .finale-eyebrow {text-align:center;font-size:10px;}
+  .cipher-workbench {padding:24px 18px;}
+  .finale-toolbar {padding:10px 12px;}
+  .finale-brand {font-size:8px;}
+  .mission-panel .cipher-tile {min-width:21px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .mission-panel * {scroll-behavior:auto;}
+}
 
 * {
   box-sizing: border-box;
@@ -164,8 +306,8 @@ kbd {
 
   .touch-dpad {
     display: grid;
-    grid-template-columns: repeat(3, clamp(32px, 10vw, 48px));
-    grid-template-rows: repeat(3, clamp(32px, 10vw, 48px));
+    grid-template-columns: repeat(3, clamp(44px, 10vw, 52px));
+    grid-template-rows: repeat(3, clamp(44px, 10vw, 52px));
   }
 
   .touch-up {
@@ -216,8 +358,8 @@ kbd {
   }
 
   .touch-dpad .touch-key {
-    width: clamp(32px, 10vw, 48px);
-    height: clamp(32px, 10vw, 48px);
+    width: clamp(44px, 10vw, 52px);
+    height: clamp(44px, 10vw, 52px);
   }
 
   .touch-action {
@@ -227,7 +369,16 @@ kbd {
     font-size: clamp(18px, 6vw, 28px) !important;
   }
 
-  body[data-scene="map"] .touch-controls {
+  body:not([data-scene="catIsland"]) .touch-controls {
     display: none;
   }
+}
+
+@media (pointer: coarse) and (orientation: portrait) {
+  body[data-scene="catIsland"] .game-frame { margin-bottom:160px; }
+  .touch-controls { top:100%; bottom:auto; height:156px; align-items:center; padding:8px 12px; }
+  .touch-actions { padding-bottom:0; }
+}
+@media (max-width:760px) {
+  .paper-copy input,.mission-panel input {font-size:16px;}
 }

@@ -3,14 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>BOCO // Katzeninsel</title>
+  <title>BOCO // Unsere kleine Geburtstagswelt</title>
   <link rel="icon" href="./assets/branding/boco.png" type="image/png">
-  <link rel="stylesheet" href="./styles.css?v=1.4.1">
-  <script>
-    try { if (sessionStorage.getItem('boco.paper-access.v1') !== 'granted') location.replace('./'); }
-    catch { location.replace('./'); }
-  </script>
-  <script type="module" src="./main.js?v=1.4.1"></script>
+  <link rel="stylesheet" href="./styles.css?v=1.7.0">
+  <script type="module" src="./main.js?v=1.7.0"></script>
 </head>
 <body data-scene="map">
   <main class="game-shell">
@@ -19,9 +15,21 @@
         id="gameCanvas"
         width="960"
         height="640"
-        aria-label="BOCO birthday game: Katzeninsel"
+        tabindex="0"
+        aria-label="BOCO Geburtstagswelt mit Katzeninsel, letzter Insel und einem künftigen Update"
       ></canvas>
 
+      <aside id="world-dock" class="world-dock" aria-label="Ausgewählte Insel" hidden>
+        <div class="world-focus-copy"><strong id="world-focus-title"></strong><p id="world-focus-description"></p></div>
+        <div class="world-focus-actions">
+          <button id="world-overview" type="button">← ÜBERSICHT</button>
+          <button type="button" data-map-zoom="-0.2" aria-label="Herauszoomen">−</button>
+          <span id="world-zoom-value">100%</span>
+          <button type="button" data-map-zoom="0.2" aria-label="Hineinzoomen">+</button>
+          <button id="world-open" type="button">INSEL BETRETEN</button>
+        </div>
+      </aside>
+      <button id="world-return" class="world-return" type="button">← WELTKARTE</button>
       <div class="touch-controls" aria-label="Touch-Steuerung">
         <div class="touch-dpad" aria-label="Bewegung">
           <button class="touch-key touch-up" type="button" data-key="w" aria-label="Nach oben">▲</button>
@@ -45,9 +53,28 @@
       <span><kbd>E</kbd> halten: Katze aufnehmen</span>
       <span><kbd>R</kbd> Level neu starten</span>
       <span><kbd>Esc</kbd> Karte</span>
-      <span class="build-version">BUILD 1.4.1</span>
+      <span class="build-version">BUILD 1.7.0</span>
     </p>
   </main>
+  <nav id="preview-tools" class="preview-tools" aria-label="Vorschau für Darina" hidden>
+    <span>VORSCHAU</span>
+    <button type="button" data-preview="map">Welt</button><button type="button" data-preview="cats">Katzen</button>
+    <button type="button" data-preview="final">Rätsel</button><button type="button" data-preview="birthday">Gruß ♥</button>
+    <button type="button" data-preview="future">Insel 3</button><button type="button" data-preview="entry">Eingang</button>
+  </nav>
+  <section id="paper-entry" class="paper-entry" role="dialog" aria-modal="true" aria-labelledby="paper-title" hidden>
+    <div class="paper-art-wrap"><p class="paper-eyebrow">TEAM BOCO // EIN KLEINES ABENTEUER FÜR DICH</p><canvas id="entry-art" width="720" height="480" aria-label="Ein leuchtender Eingang mit Coco und Bounty"></canvas><p class="paper-art-note">COCO + BOUNTY HABEN SCHON AUF DICH GEWARTET. ♥</p></div>
+    <div class="paper-copy"><span class="paper-step">01 / VOM PAPIER IN UNSERE WELT</span><h1 id="paper-title" tabindex="-1">Hey, mein Sonnenschein.</h1>
+      <p>Deine erste Nachricht liegt schon bei dir. Löse das Caesar-Rätsel auf dem Papier und bring sein Schlüsselwort mit in unsere kleine Welt.</p>
+      <form id="paper-form"><label for="paper-key">Dein Schlüsselwort</label>
+        <input id="paper-key" name="paper-key" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="80" placeholder="DAS WORT AUS DEINER NACHRICHT" required aria-describedby="paper-feedback">
+        <button type="submit">UNSERE WELT ÖFFNEN ♥</button><p id="paper-feedback" role="status" aria-live="polite"></p>
+      </form>
+      <details><summary>Ein kleiner Schubs?</summary><p>Das Decoder-Rad hilft dir beim Caesar-Rätsel. Die entschlüsselte Nachricht verrät dir das Schlüsselwort — du brauchst nur dieses Wort, keinen Zahlencode.</p></details>
+      <p class="paper-keep">Heb deinen Schlüssel auf. Er begleitet dich bis zur letzten Insel.</p>
+    </div>
+  </section>
+  <p id="game-status" class="sr-only" aria-live="polite"></p>
   <section id="mission-panel" class="mission-panel" role="dialog" aria-modal="true" aria-label="Finale der Geburtstagsmission" hidden></section>
 </body>
 </html>

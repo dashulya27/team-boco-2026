@@ -1,8 +1,11 @@
+import { createPixelArt } from "./pixel-art.js?v=1.7.0";
+import { ROOM_FLOOR,ROOM_OUTLINE,ROOM_DOOR,ROOM_BULBS,paintRoomDoor } from './room-layout.js?v=1.7.0';
+
 const WIDTH = 960;
 const HEIGHT = 640;
 const REQUIRED_DELIVERIES = 3;
-const CATCH_DISTANCE = 68;
-const JUMP_TRIGGER_DISTANCE = 54;
+const CATCH_DISTANCE = 48;
+const JUMP_TRIGGER_DISTANCE = 58;
 
 const COLORS = {
   navy: "#07101f",
@@ -52,15 +55,16 @@ const CAT_TARGETS = [
   { x: 575, y: 390 }
 ];
 
-export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplete }) {
+export function createCatIslandLevel({ canvas, ctx, roomImage, assets = new Map(), onExit, onComplete }) {
+  const screenCtx=ctx;
+  const worldCanvas=canvas.ownerDocument?.createElement('canvas');
+  if(worldCanvas) { worldCanvas.width=480; worldCanvas.height=320; }
+  const worldCtx=worldCanvas?.getContext('2d') || ctx;
+  const art=createPixelArt(worldCtx,assets);
+  let drawTime=0;
+  const particles=[];
   const levelData = {
-    playableArea: [
-      { x: 55, y: 350 },
-      { x: 402, y: 214 },
-      { x: 908, y: 414 },
-      { x: 520, y: 610 },
-      { x: 170, y: 510 }
-    ],
+    playableArea: ROOM_FLOOR.map(([x,y]) => ({x,y})),
 
     catArea: [
       { x: 88, y: 356 },
@@ -70,16 +74,13 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
       { x: 184, y: 497 }
     ],
 
-    door: {
-      x: 140,
-      y: 350,
-      radius: 52
-    },
+    door: ROOM_DOOR,
 
     obstacles: [
-      { id: "bed", x: 250, y: 350, width: 190, height: 110 },
+      { id: "bed", points: [{x:260,y:350},{x:361,y:310},{x:453,y:422},{x:350,y:465}] },
       { id: "nightstand", x: 450, y: 326, width: 46, height: 46 },
-      { id: "tvCabinet", x: 780, y: 330, width: 86, height: 125 },
+      { id: "wardrobe", x: 781, y: 380, width: 90, height: 43 },
+      { id: "tvCabinet", x: 650, y: 308, width: 104, height: 54 },
       { id: "chair", x: 156, y: 452, width: 64, height: 54 },
       { id: "airPurifier", x: 635, y: 425, width: 46, height: 51 }
     ]
@@ -98,6 +99,8 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
 
   const state = {
     phase: "intro",
+    elapsed: 0,
+    deliveries: [],
     catsDelivered: 0,
     carriedCat: null,
     activeCats: [],
@@ -111,6 +114,9 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
 
   function reset() {
     state.phase = "intro";
+    state.elapsed=0;
+    state.deliveries=[];
+    particles.length=0;
     state.catsDelivered = 0;
     state.carriedCat = null;
     state.activeCats = [];
@@ -163,6 +169,8 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
       targetX: spawn.x,
       targetY: spawn.y,
       retargetTimer: 0,
+      direction: "down",
+      moving: false,
       tailPhase: 0
     };
 
@@ -172,11 +180,17 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
   }
 
   function update(deltaTime, keys) {
+    deltaTime=Math.min(.05,Math.max(0,Number(deltaTime)||0));
+    for(let i=particles.length-1;i>=0;i--) {
+      const p=particles[i];p.life-=deltaTime;p.x+=p.vx*deltaTime;p.y+=p.vy*deltaTime;p.vy+=24*deltaTime;
+      if(p.life<=0) particles.splice(i,1);
+    }
     state.toastTimer = Math.max(0, state.toastTimer - deltaTime);
     state.keyFlash = Math.max(0, state.keyFlash - deltaTime);
 
     if (state.phase === "intro" || state.phase === "win") return;
 
+    state.elapsed+=deltaTime;
     updatePlayer(deltaTime, keys);
 
     // E darf gehalten werden: Sobald Dominik nah genug ist, greift er automatisch zu.
@@ -190,8 +204,8 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
 
       if (state.returnTimer <= 0) {
         const returnSpawn = state.returningCat.sourceId === "coco"
-          ? { x: 695, y: 355 }
-          : { x: 695, y: 455 };
+          ? { x: 730, y: 465 }
+          : { x: 555, y: 385 };
 
         state.activeCats.push(createCat(state.returningCat, returnSpawn));
         showToast(`${state.returningCat.name} IST SCHON WIEDER DA`);
@@ -254,7 +268,9 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     cat.recoveryTimer = Math.max(0, cat.recoveryTimer - deltaTime);
     cat.tailPhase += deltaTime * (cat.behavior === "flee" ? 12 : 8);
 
+    cat.moving=false;
     if (cat.jump) {
+      cat.moving=true;
       updateCatJump(deltaTime, cat);
       return;
     }
@@ -303,6 +319,9 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     if (canCatStand(cat.x + moveX, cat.y)) cat.x += moveX;
     if (canCatStand(cat.x, cat.y + moveY)) cat.y += moveY;
 
+    cat.moving=Math.hypot(cat.x-oldX,cat.y-oldY)>.05;
+    if(cat.moving) cat.direction=Math.abs(cat.x-oldX)>Math.abs(cat.y-oldY)
+      ? (cat.x>oldX?'right':'left') : (cat.y>oldY?'down':'up');
     if (cat.x === oldX && cat.y === oldY) {
       if (cat.behavior === "flee") chooseEscapeTarget(cat);
       else chooseCatTarget(cat);
@@ -324,7 +343,10 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
         y: cat.y + rotatedY * cat.jumpDistance
       };
 
-      if (canCatStand(landing.x, landing.y)) {
+      const pathClear=Array.from({length:9},(_,i) => ({
+        x:lerp(cat.x,landing.x,(i+1)/9),y:lerp(cat.y,landing.y,(i+1)/9)
+      })).every(p => canCatStand(p.x,p.y));
+      if (pathClear) {
         candidates.push(landing);
       }
     }
@@ -454,7 +476,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     for (let index = 0; index < state.activeCats.length; index += 1) {
       const catDistance = distance(player, state.activeCats[index]);
 
-      if (!state.activeCats[index].jump && catDistance <= CATCH_DISTANCE && catDistance < nearestDistance) {
+      if (canReachCat(state.activeCats[index]) && catDistance < nearestDistance) {
         nearestIndex = index;
         nearestDistance = catDistance;
       }
@@ -463,6 +485,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     if (nearestIndex >= 0) {
       state.carriedCat = state.activeCats.splice(nearestIndex, 1)[0];
       state.phase = "carrying";
+      burst(player.x,player.y-18,10,COLORS.yellow);
       showToast(`${state.carriedCat.name} AUFGENOMMEN`);
     }
   }
@@ -470,6 +493,8 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
   function deliverCat() {
     const deliveredCat = state.carriedCat;
     state.catsDelivered += 1;
+    state.deliveries.push(deliveredCat.name);
+    burst(levelData.door.x+10,levelData.door.y,22,COLORS.yellow);
     state.carriedCat = null;
     state.keyFlash = 0.8;
 
@@ -526,251 +551,103 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     else if (state.phase === "win") onExit();
   }
 
-  function draw(timestamp) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#010309";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-    drawStructure();
-    drawFurniture();
-
-    if (state.phase === "intro") {
-      drawSleepingDominik(timestamp);
-    } else {
-      for (const cat of state.activeCats) drawCat(cat);
-      drawPlayer(player, state.carriedCat);
+  function draw(timestamp, options = {}) {
+    drawTime=timestamp/1000;
+    ctx=worldCtx;
+    ctx.save();
+    if(worldCanvas) ctx.setTransform(.5,0,0,.5,0,0);
+    ctx.imageSmoothingEnabled=false;
+    ctx.clearRect(0,0,WIDTH,HEIGHT);
+    ctx.drawImage(roomImage,0,0,WIDTH,HEIGHT);
+    art.rug();
+    drawWallDecor();
+    const objects=[
+      {y:368,draw:() => art.nightstand(drawTime)},
+      {y:455,draw:() => {art.bed(); art.sleeping(drawTime,state.phase==='intro');}},
+      {y:360,draw:() => art.tvCabinet()},
+      {y:422,draw:() => art.wardrobe()},
+      {y:500,draw:() => art.chair()},
+      {y:473,draw:() => art.airPurifier(drawTime)}
+    ];
+    if(state.phase!=='intro') {
+      for(const cat of state.activeCats) objects.push({y:cat.y,draw:() => drawCat(cat)});
+      objects.push({y:player.y,draw:() => art.player(player,state.carriedCat,drawTime)});
     }
-
+    objects.sort((a,b) => a.y-b.y).forEach(object => object.draw());
     drawDarkness();
     drawLights(timestamp);
-    drawUI(timestamp);
-
-    if (state.phase === "intro") drawIntroOverlay(timestamp);
-    if (state.phase === "win") drawWinOverlay(timestamp);
-  }
-
-  function drawStructure() {
-    ctx.drawImage(roomImage, 0, 0, WIDTH, HEIGHT);
-  }
-
-  function drawFurniture() {
-    drawRug();
-    drawBed();
-    drawNightstand();
-    drawTvCabinet();
-    drawChair();
-    drawAirPurifier();
-  }
-
-  function drawRug() {
-    ctx.save();
-    ctx.fillStyle = "#26334b";
-    polygon([
-      { x: 465, y: 365 },
-      { x: 665, y: 324 },
-      { x: 781, y: 429 },
-      { x: 555, y: 491 }
-    ]);
-    ctx.fill();
-
-    ctx.globalAlpha = 0.32;
-    ctx.strokeStyle = "#7b6b78";
-    ctx.lineWidth = 3;
-    for (let offset = 0; offset < 5; offset += 1) {
-      ctx.beginPath();
-      ctx.moveTo(500 + offset * 42, 365 - offset * 8);
-      ctx.lineTo(590 + offset * 40, 468 - offset * 10);
-      ctx.stroke();
+    drawParticles();
+    ctx.restore();
+    ctx=screenCtx;
+    if(worldCanvas) {
+      ctx.imageSmoothingEnabled=false;ctx.clearRect(0,0,WIDTH,HEIGHT);
+      ctx.drawImage(worldCanvas,0,0,WIDTH,HEIGHT);
     }
+    if(options.interface!==false) {
+      drawUI(timestamp);
+      if(state.phase==='intro') drawIntroOverlay(timestamp);
+      if(state.phase==='win') drawWinOverlay(timestamp);
+    }
+  }
+
+  function drawWallDecor() {
+    const logo=assets.get('logo');
+    ctx.save();
+    ctx.translate(530,151);ctx.transform(1,.395,0,1,0,0);
+    ctx.fillStyle='#141b2a';ctx.fillRect(-4,-4,65,75);
+    ctx.fillStyle='#bba165';ctx.fillRect(-2,-2,61,71);
+    ctx.fillStyle='#09111e';ctx.fillRect(0,0,57,67);
+    if(logo) ctx.drawImage(logo.image,3,3,51,51);
+    ctx.fillStyle='#dfc76b';ctx.fillRect(12,58,32,2);
+    ctx.restore();
+    ctx.save();ctx.translate(198,219);ctx.transform(1,-.395,0,1,0,0);
+    ctx.fillStyle='#83796d';ctx.fillRect(0,0,30,38);
+    ctx.fillStyle='#202b40';ctx.fillRect(3,3,24,32);
+    ctx.fillStyle='#c48a9b';
+    polygon([{x:8,y:14},{x:12,y:10},{x:16,y:14},{x:20,y:10},{x:24,y:14},{x:16,y:24}]);ctx.fill();
     ctx.restore();
   }
 
-  function drawBed() {
-    ctx.fillStyle = "#0a1121";
-    ctx.fillRect(250, 350, 190, 110);
-    ctx.fillStyle = "#27324b";
-    ctx.fillRect(258, 358, 174, 94);
-    ctx.fillStyle = COLORS.magenta;
-    ctx.fillRect(262, 389, 166, 57);
-    ctx.fillStyle = "#bfc5ce";
-    ctx.fillRect(262, 364, 70, 23);
-    ctx.fillRect(337, 364, 68, 23);
-    ctx.fillStyle = "#343049";
-    ctx.fillRect(262, 413, 166, 14);
-    ctx.fillStyle = "#11192b";
-    ctx.fillRect(246, 338, 198, 14);
-    ctx.fillStyle = "#34415b";
-    ctx.fillRect(250, 352, 7, 101);
-    ctx.fillRect(433, 352, 7, 101);
-  }
-
-  function drawNightstand() {
-    ctx.fillStyle = "#121a2d";
-    ctx.fillRect(450, 326, 46, 46);
-    ctx.fillStyle = "#263a59";
-    ctx.fillRect(455, 331, 36, 35);
-    ctx.fillStyle = COLORS.yellowSoft;
-    ctx.fillRect(483, 341, 4, 4);
-    ctx.fillRect(483, 356, 4, 4);
-  }
-
-  function drawTvCabinet() {
-    ctx.fillStyle = "#251d1c";
-    ctx.fillRect(780, 330, 86, 125);
-    ctx.fillStyle = COLORS.wood;
-    ctx.fillRect(786, 335, 74, 114);
-    ctx.fillStyle = COLORS.woodLight;
-    ctx.fillRect(792, 342, 28, 101);
-    ctx.fillRect(825, 342, 29, 101);
-    ctx.fillStyle = "#060b14";
-    ctx.fillRect(762, 270, 92, 60);
-    ctx.fillStyle = "#152844";
-    ctx.fillRect(769, 277, 78, 46);
-    ctx.fillStyle = "#3b4f69";
-    ctx.fillRect(775, 283, 5, 33);
-  }
-
-  function drawChair() {
-    ctx.fillStyle = "#5b412c";
-    ctx.fillRect(156, 452, 64, 54);
-    ctx.fillStyle = "#9b805e";
-    ctx.fillRect(162, 457, 52, 38);
-    ctx.fillStyle = "#cbc3b0";
-    ctx.fillRect(167, 461, 42, 26);
-    ctx.fillStyle = "#2c3850";
-    ctx.fillRect(178, 466, 20, 15);
-    ctx.fillStyle = "#5b412c";
-    ctx.fillRect(160, 494, 7, 15);
-    ctx.fillRect(210, 494, 7, 15);
-  }
-
-  function drawAirPurifier() {
-    ctx.fillStyle = "#9fa8b5";
-    ctx.fillRect(635, 430, 46, 42);
-    ctx.fillStyle = "#d2d7dd";
-    ctx.fillRect(640, 425, 36, 42);
-    ctx.fillStyle = "#172033";
-    ctx.fillRect(644, 425, 28, 8);
-    ctx.fillStyle = "#718096";
-    for (let x = 646; x <= 669; x += 6) ctx.fillRect(x, 427, 3, 3);
-    ctx.fillStyle = "#778398";
-    for (let y = 440; y <= 460; y += 6) ctx.fillRect(643, y, 3, 3);
-  }
-
-  function drawSleepingDominik(timestamp) {
-    const breathe = Math.sin(timestamp / 450) > 0 ? 1 : 0;
-    ctx.fillStyle = "#d7b18a";
-    ctx.fillRect(278, 375 + breathe, 18, 16);
-    ctx.fillStyle = "#34241f";
-    ctx.fillRect(275, 372 + breathe, 22, 7);
-    ctx.fillStyle = "#172b4a";
-    ctx.fillRect(295, 379 + breathe, 58, 20);
-    ctx.fillStyle = "#293a5a";
-    ctx.fillRect(348, 383 + breathe, 39, 15);
-
-    drawText("Z", 320, 354, 12, "#8da1c3", "center");
-    drawText("Z", 337, 341, 10, "#667997", "center");
-  }
-
-  function drawPlayer(character, carriedCat) {
-    const bob = character.moving ? Math.round(Math.sin(character.step) * 2) : 0;
-    const x = Math.round(character.x);
-    const y = Math.round(character.y + bob);
-
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = "#02040a";
-    ctx.fillRect(x - 12, y - 5, 24, 8);
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = "#1a2438";
-    ctx.fillRect(x - 9, y - 22, 18, 20);
-    ctx.fillStyle = COLORS.yellow;
-    ctx.fillRect(x - 9, y - 15, 18, 4);
-    ctx.fillStyle = "#293d61";
-    ctx.fillRect(x - 8, y - 2, 7, 9);
-    ctx.fillRect(x + 2, y - 2, 7, 9);
-
-    ctx.fillStyle = "#d2a47d";
-    ctx.fillRect(x - 7, y - 32, 14, 11);
-    ctx.fillStyle = "#31231e";
-    ctx.fillRect(x - 8, y - 35, 16, 7);
-    ctx.fillRect(x - 8, y - 30, 3, 5);
-
-    ctx.fillStyle = "#9ac4eb";
-    if (character.direction === "left") ctx.fillRect(x - 7, y - 28, 2, 2);
-    else if (character.direction === "right") ctx.fillRect(x + 5, y - 28, 2, 2);
-    else if (character.direction === "down") {
-      ctx.fillRect(x - 4, y - 28, 2, 2);
-      ctx.fillRect(x + 3, y - 28, 2, 2);
-    }
-
-    if (carriedCat) {
-      drawCatSprite(x + 13, y - 34, carriedCat.collar, 0, 0.72);
-    }
-  }
-
-  // CAT AI 3/4: Der Sprung hebt nur den Sprite an; der Schatten bleibt am Boden.
   function drawCat(cat) {
-    drawCatSprite(
-      Math.round(cat.x),
-      Math.round(cat.y),
-      cat.collar,
-      Math.sin(cat.tailPhase),
-      1,
-      cat.jumpHeight
-    );
-
-    if (distance(player, cat) < 82) {
-      drawText(cat.name, cat.x, cat.y - 29 - cat.jumpHeight, 10, "#b8c4d8", "center");
-    }
-
-    if (cat.recoveryTimer > 0) {
-      drawText("...", cat.x, cat.y - 42, 12, COLORS.yellow, "center");
+    art.shadow(cat.x,cat.y+7,Math.max(18,31-cat.jumpHeight*.4),9);
+    art.cat(cat,drawTime);
+    if(distance(player,cat)<90) {
+      drawText(cat.name,cat.x,cat.y-46-cat.jumpHeight,10,'#d5e4ed','center');
+      if(cat.recoveryTimer>0) drawText('…',cat.x,cat.y-58,12,COLORS.yellow,'center');
     }
   }
 
-  function drawCatSprite(x, y, collar, tailWave, scale, jumpHeight = 0) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.scale(scale, scale);
+  function burst(x,y,count,color) {
+    for(let i=0;i<count;i++) {
+      const angle=i/count*Math.PI*2;
+      particles.push({x,y,vx:Math.cos(angle)*(24+i%3*12),vy:Math.sin(angle)*30-24,life:.5+i%4*.12,color});
+    }
+  }
 
-    const shadowWidth = Math.max(17, 27 - jumpHeight * 0.35);
-    ctx.globalAlpha = Math.max(0.2, 0.42 - jumpHeight * 0.009);
-    ctx.fillStyle = "#02040a";
-    ctx.fillRect(-shadowWidth / 2, 5, shadowWidth, 6);
-    ctx.restore();
+  function drawParticles() {
+    for(const p of particles) {
+      ctx.globalAlpha=Math.min(1,p.life*2);
+      ctx.fillStyle=p.color;ctx.fillRect(Math.round(p.x),Math.round(p.y),2,2);
+    }
+    ctx.globalAlpha=1;
+  }
 
-    ctx.save();
-    ctx.translate(x, y - jumpHeight);
-    ctx.scale(scale, scale);
-
-    ctx.fillStyle = COLORS.white;
-    ctx.fillRect(-10, -9, 21, 16);
-    ctx.fillRect(-8, -16, 16, 10);
-    ctx.fillRect(-8, -20, 5, 6);
-    ctx.fillRect(4, -20, 5, 6);
-    ctx.fillRect(-12, 4, 5, 8);
-    ctx.fillRect(6, 4, 5, 8);
-
-    ctx.fillStyle = "#aeb8c4";
-    ctx.fillRect(-7, -15, 3, 3);
-    ctx.fillRect(4, -15, 3, 3);
-    ctx.fillStyle = "#1a2435";
-    ctx.fillRect(-6, -14, 2, 2);
-    ctx.fillRect(5, -14, 2, 2);
-    ctx.fillStyle = collar;
-    ctx.fillRect(-9, -6, 18, 3);
-
-    ctx.fillStyle = COLORS.white;
-    ctx.fillRect(10, -4 + Math.round(tailWave * 2), 9, 4);
-    ctx.fillRect(17, -9 + Math.round(tailWave * 3), 4, 8);
-
-    ctx.restore();
+  function canReachCat(cat) {
+    if(cat.jump || distance(player,cat)>CATCH_DISTANCE) return false;
+    const steps=Math.ceil(distance(player,cat)/5);
+    for(let i=1;i<steps;i++) {
+      const x=lerp(player.x,cat.x,i/steps),y=lerp(player.y,cat.y,i/steps);
+      if(levelData.obstacles.some(obstacle => intersectsObstacle(x,y,2,obstacle))) return false;
+    }
+    return true;
   }
 
   function drawDarkness() {
-    ctx.fillStyle = state.phase === "intro" ? "rgb(1 5 16 / 46%)" : "rgb(1 5 16 / 37%)";
+    ctx.save();
+    ctx.beginPath();ROOM_OUTLINE.forEach(([x,y],i) => i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
+    ctx.fillStyle = state.phase === "intro" ? "rgb(1 5 16 / 27%)" : "rgb(1 5 16 / 17%)";
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.restore();
   }
 
   function drawLights(timestamp) {
@@ -792,22 +669,26 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     drawGlow(345, 458, 90, `rgb(237 181 61 / ${0.09 * slowPulse})`);
 
     // Koordinaten liegen exakt auf den bereits im Raum-PNG gezeichneten Birnen.
-    const bulbs = [
-      [303, 137], [328, 145], [359, 138], [391, 122], [423, 106], [439, 89],
-      [599, 171], [613, 197], [633, 215], [661, 223], [691, 213], [712, 201]
-    ];
+    const bulbs = ROOM_BULBS;
 
     for (let index = 0; index < bulbs.length; index += 1) {
       const [x, y] = bulbs[index];
       const flicker = 0.93 + Math.sin(timestamp / 310 + index * 1.7) * 0.07;
-      drawNeonBulb(x, y, slowPulse * flicker);
+      drawNeonBulb(x, y, slowPulse * flicker, index>=6 ? (timestamp/85+index*32)%360 : null);
     }
+
+    // Candle and pendant: source positions match the furniture and room pixels.
+    const candle=.92+Math.sin(timestamp/71)*.04+Math.sin(timestamp/113)*.03;
+    const candlePoint=art.candlePosition();
+    drawGlow(candlePoint.x,candlePoint.y,55,'rgba(255,173,73,'+(.12*candle)+')');
+    drawGlow(492,194,75,'rgba(255,221,145,'+(.10*slowPulse)+')');
+    ctx.fillStyle='#ffe3a1';ctx.fillRect(480,194,25,2);
 
     if (carrying) {
       // Nur weiches Licht: keine harte geometrische Lichtfläche und kein Kreis.
-      drawGlow(145, 325, 130, `rgb(243 185 49 / ${0.24 * doorPulse})`);
-      drawGlow(145, 345, 72, `rgb(255 218 92 / ${0.34 * doorPulse})`);
-      drawGlow(170, 392, 90, `rgb(235 176 48 / ${0.16 * doorPulse})`);
+      drawGlow(ROOM_DOOR.lightX,ROOM_DOOR.lightY,90,`rgb(243 185 49 / ${0.20 * doorPulse})`);
+      drawGlow(147,317,62,`rgb(255 218 92 / ${0.27 * doorPulse})`);
+      drawGlow(159,344,74,`rgb(235 176 48 / ${0.16 * doorPulse})`);
     } else {
       drawGlow(levelData.door.x, levelData.door.y, 58, `rgb(226 178 52 / ${0.045 * slowPulse})`);
     }
@@ -815,56 +696,17 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     ctx.restore();
   }
 
-  function drawOpenDoor() {
-    ctx.save();
+  function drawOpenDoor() { paintRoomDoor(ctx,true); }
 
-    // Dunkler Raum hinter der Tür. Das vorhandene Türblatt im PNG wird nur innen abgedeckt,
-    // der gezeichnete Rahmen des Hintergrundbildes bleibt erhalten.
-    const doorway = ctx.createLinearGradient(122, 385, 166, 230);
-    doorway.addColorStop(0, "#0c1727");
-    doorway.addColorStop(0.55, "#050b17");
-    doorway.addColorStop(1, "#02050c");
-    ctx.fillStyle = doorway;
-    polygon([
-      { x: 121, y: 247 },
-      { x: 169, y: 223 },
-      { x: 169, y: 365 },
-      { x: 122, y: 390 }
-    ]);
-    ctx.fill();
-
-    // Das geöffnete Türblatt ist fast von der Seite sichtbar.
-    ctx.fillStyle = "#241b19";
-    polygon([
-      { x: 169, y: 223 },
-      { x: 189, y: 234 },
-      { x: 189, y: 376 },
-      { x: 169, y: 365 }
-    ]);
-    ctx.fill();
-
-    ctx.strokeStyle = "#57412f";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(170, 225);
-    ctx.lineTo(187, 235);
-    ctx.lineTo(187, 374);
-    ctx.lineTo(170, 364);
-    ctx.stroke();
-
-    ctx.fillStyle = "#b99c42";
-    ctx.fillRect(181, 302, 3, 3);
-    ctx.restore();
-  }
-
-  function drawNeonBulb(x, y, intensity) {
+  function drawNeonBulb(x, y, intensity, hue = null) {
     // Маленькое тёплое ядро и два спокойных ореола, без белого прожектора.
     drawGlow(x, y, 32, `rgb(49 103 183 / ${0.055 * intensity})`);
     drawGlow(x, y, 25, `rgb(247 190 53 / ${0.15 * intensity})`);
     drawGlow(x, y, 11, `rgb(255 222 105 / ${0.3 * intensity})`);
 
-    ctx.fillStyle = "#f2d65a";
-    ctx.fillRect(x - 1, y - 1, 3, 3);
+    if(hue!==null) drawGlow(x,y,28,'hsla('+hue+',80%,65%,'+(.16*intensity)+')');
+    ctx.fillStyle=hue===null?'#f2d65a':'hsl('+hue+',72%,74%)';
+    ctx.fillRect(x-1,y-1,3,3);
   }
 
   function drawUI(timestamp) {
@@ -874,7 +716,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     ctx.lineWidth = 1;
     ctx.strokeRect(18, 16, 924, 64);
 
-    drawText("02 // KATZENINSEL", 36, 37, 17, COLORS.yellow, "left");
+    drawText("01 // NACHTSCHICHT", 36, 37, 17, COLORS.yellow, "left");
     drawText(objectiveText(), 36, 61, 11, "#8794aa", "left");
 
     for (let index = 0; index < REQUIRED_DELIVERIES; index += 1) {
@@ -893,7 +735,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
 
     const catchableCat = state.phase === "chase"
       ? state.activeCats
-        .filter((cat) => !cat.jump && distance(player, cat) <= CATCH_DISTANCE)
+        .filter((cat) => canReachCat(cat))
         .sort((first, second) => distance(player, first) - distance(player, second))[0]
       : null;
 
@@ -913,15 +755,15 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
       const alpha = Math.min(1, state.toastTimer * 2.5);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = "rgb(3 8 19 / 88%)";
-      ctx.fillRect(315, 91, 330, 34);
+      ctx.fillRect(270, 91, 420, 34);
       ctx.strokeStyle = COLORS.yellowSoft;
-      ctx.strokeRect(315, 91, 330, 34);
+      ctx.strokeRect(270, 91, 420, 34);
       drawText(state.toast, 480, 108, 12, COLORS.yellow, "center");
       ctx.globalAlpha = 1;
     }
 
     if (state.phase !== "intro" && state.phase !== "win") {
-      const markerY = player.y - 48 + Math.sin(timestamp / 130) * 2;
+      const markerY = player.y - 64 + Math.sin(timestamp / 130) * 2;
       ctx.fillStyle = COLORS.yellow;
       polygon([
         { x: player.x, y: markerY + 7 },
@@ -937,7 +779,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     const pulse = 0.65 + Math.sin(timestamp / 350) * 0.25;
-    drawText("MISSION 02", 480, 220, 13, "#75839c", "center");
+    drawText("LEVEL 01 // PAW TOKEN 02", 480, 220, 13, "#75839c", "center");
     drawText("KATZENINSEL", 480, 261, 34, COLORS.yellow, "center");
     drawText("03:17 // DIE KATZEN SIND WIEDER WACH", 480, 303, 13, "#c6cbd5", "center");
 
@@ -945,7 +787,8 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     drawText("[ ENTER / CLICK ]  AUFSTEHEN", 480, 378, 15, COLORS.yellow, "center");
     ctx.globalAlpha = 1;
 
-    drawText("Bringe die Katzen dreimal zur Schlafzimmertür.", 480, 421, 12, "#7f8ba1", "center");
+    drawText("Coco und Bounty zur Tür bringen. Die erste Katze kommt einmal zurück.",480,421,12,"#a7b4c9","center");
+    drawText("WASD / PFEILE   ·   E HALTEN   ·   R NEUSTART   ·   ESC KARTE",480,451,11,"#758ba6","center");
   }
 
   function drawWinOverlay(timestamp) {
@@ -966,8 +809,10 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     drawText("NACHTSCHICHT BEENDET", 480, 270, 26, COLORS.yellow, "center");
     drawText("02", 430, 335, 34, COLORS.yellow, "center");
     drawText("PAW TOKEN", 540, 335, 15, "#dce3e8", "center");
-    drawText("3 / 3 SCHLÜSSEL", 480, 376, 13, COLORS.green, "center");
-    drawText("[ ENTER / CLICK ]  ZUR WELTKARTE", 480, 417, 12, "#aeb8c8", "center");
+    drawText("3 / 3 SCHLÜSSEL",480,371,13,COLORS.green,"center");
+    const minutes=Math.floor(state.elapsed/60), seconds=Math.floor(state.elapsed%60);
+    drawText("ZEIT "+minutes+":"+String(seconds).padStart(2,'0')+"   //   "+state.deliveries.join(" · "),480,393,10,"#90a4bb","center");
+    drawText("[ ENTER / CLICK ]  DIE LETZTE INSEL WARTET", 480, 417, 12, "#aeb8c8", "center");
   }
 
   function drawPrompt(key, text) {
@@ -1030,7 +875,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     }
 
     return !levelData.obstacles.some((obstacle) =>
-      circleIntersectsRectangle(x, y, radius, obstacle)
+      intersectsObstacle(x, y, radius, obstacle)
     );
   }
 
@@ -1039,7 +884,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     if (!isCatInsideFloor(x, y)) return false;
 
     return !levelData.obstacles.some((obstacle) =>
-      circleIntersectsRectangle(x, y, 18, obstacle)
+      intersectsObstacle(x, y, 18, obstacle)
     );
   }
 
@@ -1052,6 +897,17 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     ];
 
     return spriteBounds.every((point) => pointInPolygon(point, levelData.catArea));
+  }
+
+  function intersectsObstacle(x,y,radius,obstacle) {
+    if(!obstacle.points) return circleIntersectsRectangle(x,y,radius,obstacle);
+    if(pointInPolygon({x,y},obstacle.points)) return true;
+    return obstacle.points.some((a,i) => {
+      const b=obstacle.points[(i+1)%obstacle.points.length];
+      const dx=b.x-a.x,dy=b.y-a.y;
+      const t=Math.max(0,Math.min(1,((x-a.x)*dx+(y-a.y)*dy)/(dx*dx+dy*dy)));
+      return Math.hypot(x-(a.x+t*dx),y-(a.y+t*dy))<radius;
+    });
   }
 
   function circleIntersectsRectangle(x, y, radius, rectangle) {
@@ -1114,9 +970,14 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
     return {
       phase: state.phase,
       catsDelivered: state.catsDelivered,
+      elapsed: state.elapsed,
+      deliveries: [...state.deliveries],
+      catsOutsideFurniture: state.activeCats.every(cat => !levelData.obstacles.some(o => intersectsObstacle(cat.x,cat.y,17,o))),
       player: { x: player.x, y: player.y },
       activeCats: state.activeCats.map((cat) => ({
         id: cat.id,
+        sourceId: cat.sourceId,
+        direction: cat.direction,
         x: cat.x,
         y: cat.y,
         name: cat.name,
@@ -1143,6 +1004,7 @@ export function createCatIslandLevel({ canvas, ctx, roomImage, onExit, onComplet
 
   return {
     roomImage,
+    assets,
     reset,
     update,
     draw,
